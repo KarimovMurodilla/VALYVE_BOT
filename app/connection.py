@@ -15,9 +15,10 @@ def createUserStatus():
 				user_name TEXT,
 				user_username TEXT,
 				user_status TEXT,
-				user_referral INT,
-				active_referrals INT,
-				user_balance BOOLEAN,
+				user_referral INT DEFAULT 0,
+				active_referrals INT DEFAULT 0,
+				user_balance BOOLEAN DEFAULT 0,
+				user_coupon INT DEFAULT 0,
 				from_id INT,
 				pagination INT,
 				date_start timestamp
@@ -103,6 +104,7 @@ def createRatingTable():
 def createPaymentTable():
 	cur.execute("""CREATE TABLE IF NOT EXISTS payments(
 				user_id INT,
+				title TEXT,
 				user_payment INT DEFAULT 0,
 				bot_payment INT DEFAULT 0,
 				date_of_payment TIMESTAMP
@@ -119,6 +121,7 @@ def checkReferral(user_id: str):
 def get_id(user_id: str):
 	idUser = cur.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
 	return idUser
+
 
 def addReferral(user_id: str):
 	cur.execute("UPDATE users SET user_referral = user_referral+1 WHERE user_id = ?", (user_id,))
@@ -175,7 +178,9 @@ def backPagination(user_id: str):
 	con.commit()
 
 
-
+def addBalance(user_id: str, user_balance: int):
+	cur.execute(f"UPDATE users SET user_balance = user_balance+\'{user_balance}\' WHERE user_id = ?", (user_id,))
+	con.commit()
 
 
 
@@ -377,12 +382,13 @@ def selectReviews(ex_id: str):
 
 
 #-----PAYMENTS-----
-def addPayment(user_id: str, user_payment: int, date_of_payment: str):
-	cur.execute("INSERT INTO payments (user_id, user_payment, date_of_payment)VALUES(?,?,?)", (user_id, user_payment, date_of_payment,))
+def addPayment(user_id: str, title: str, user_payment: int, date_of_payment: str):
+	cur.execute("INSERT INTO payments (user_id, title, user_payment, date_of_payment)VALUES(?,?,?,?)", (user_id, title, user_payment, date_of_payment,))
 	con.commit()
 
-def addBotPayment(user_id: str, bot_payment: int, date_of_payment: str):
-	cur.execute("INSERT INTO payments (user_id, bot_payment, date_of_payment)VALUES(?,?,?)", (user_id, bot_payment, date_of_payment,))
+
+def addBotPayment(user_id: str, title: str, bot_payment: int, date_of_payment: str):
+	cur.execute("INSERT INTO payments (user_id, title, bot_payment, date_of_payment)VALUES(?,?,?,?)", (user_id, title, bot_payment, date_of_payment,))
 	con.commit()
 
 

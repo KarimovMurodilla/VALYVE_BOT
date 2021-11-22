@@ -59,9 +59,10 @@ edit_profil.add(edit)
 
 info = types.InlineKeyboardMarkup(row_width = 1)
 auth = types.InlineKeyboardButton(text = "Переподключение", callback_data = 'auth')
-ref = types.InlineKeyboardButton(text = "Банк проекта", callback_data = 'ref')
+faq = types.InlineKeyboardButton(text = "FAQ Справочная", callback_data = 'faq')
+ref = types.InlineKeyboardButton(text = "Банк проекта", callback_data = 'bank')
 support = types.InlineKeyboardButton(text = "Поддержка", callback_data = 'support')
-info.add(auth, ref, support)
+info.add(auth, faq, ref, support)
 
 
 change_order = types.InlineKeyboardMarkup(row_width = 2)
@@ -113,6 +114,14 @@ stat = types.InlineKeyboardButton(text = 'Статистика', callback_data =
 referral_settings.add(withdraw, top_up)
 referral_settings.add(buy_cupons)
 referral_settings.add(stat)
+
+
+def autoMenu(title: str):
+	if title == 'customer':
+		return menu_customer
+
+	else:
+		return menu_executor
 
 
 def get_orders(chat_id):
@@ -291,8 +300,26 @@ def viewVacancy(cus_id, order_id):
 
 
 def skipBtn():
-	skip_btn = types.InlineKeyboardMarkup(row_width = 2)
+	skip_btn = types.InlineKeyboardMarkup()
 	skip = types.InlineKeyboardButton(text = "Пропустить", callback_data = f'cSkip')
 	skip_btn.add(skip)
 
-	return skip_btn	
+	return skip_btn
+
+
+def withdrawBtns():
+	withdraw_btns = types.InlineKeyboardMarkup(row_width = 2)
+	card = types.InlineKeyboardButton(text = "Карта", callback_data = 'card')
+	purse = types.InlineKeyboardButton(text = "Кошелёк", callback_data = 'purse')
+	withdraw_btns.add(card, purse)
+
+	return withdraw_btns
+
+
+def withdrawCheckBtns():
+	withdraw_check_btns = types.InlineKeyboardMarkup(row_width = 2)
+	confirm = types.InlineKeyboardButton(text = "Подтвердить", callback_data = 'confirm')
+	change_withdraw = types.InlineKeyboardButton(text = "Изменить", callback_data = 'change_withdraw')
+	withdraw_check_btns.add(confirm, change_withdraw)
+
+	return withdraw_check_btns

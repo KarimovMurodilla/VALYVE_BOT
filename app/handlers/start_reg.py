@@ -1,3 +1,5 @@
+import os
+
 from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -7,9 +9,6 @@ from .. import common_captcha, file_ids, buttons, config
 bot = Bot(token=config.TOKEN, parse_mode = 'html')
 
 
-# cap = common_captcha.process_captcha()
-
-
 class Start(StatesGroup):
     step1 = State()
 
@@ -17,16 +16,19 @@ class Start(StatesGroup):
 async def process_callback_ok(c: types.CallbackQuery, state: FSMContext):
 	cap = common_captcha.process_captcha()
 	async with state.proxy() as data:
-		data['captcha_key'] = cap[1]
+		data['captcha_key'] = cap
 	
-	await bot.edit_message_media(media = types.InputMedia(
-								type = 'photo', 
-								media = cap[0], 
-								caption = "⚠️ <b>Чтоб продолжить использование бота, необходимо решить капчу.</b>\n\nОтправьте мне текст, что изображен на картинке."),
-								chat_id = c.message.chat.id,
-								message_id = c.message.message_id
-								)
-	await Start.step1.set()
+		with open(f'{config.CAPTCHA_PHOTO_PATH}{cap}.png', 'rb') as img:
+			await bot.edit_message_media(media = types.InputMedia(
+										type = 'photo', 
+										media = img, 
+										caption = "⚠️ <b>Чтоб продолжить использование бота, необходимо решить капчу.</b>\n\nОтправьте мне текст, что изображен на картинке."),
+										chat_id = c.message.chat.id,
+										message_id = c.message.message_id
+										)
+			
+			os.system(f"del -y {config.CAPTCHA_PHOTO_PATH}{cap}.png")
+			await Start.step1.set()
 
 
 

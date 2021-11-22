@@ -476,7 +476,7 @@ def register_reg_order_handlers(dp: Dispatcher):
 	dp.register_callback_query_handler(process_pay_50, lambda c: c.data == 'price_50',  state = '*')
 	dp.register_callback_query_handler(process_pay_80, lambda c: c.data == 'price_80',  state = '*')
 	dp.register_callback_query_handler(process_pay_270, lambda c: c.data == 'price_270',  state = '*')
-	dp.register_callback_query_handler(check_payment, lambda c: c.data.startswith('check'),  state = '*')
+	# dp.register_callback_query_handler(check_payment, lambda c: c.data.startswith('check'),  state = '*')
 
 
 	dp.register_callback_query_handler(cSkip_output_location, lambda c: c.data == 'cSkip', state = CreateOrder.step1)

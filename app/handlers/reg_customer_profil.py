@@ -87,7 +87,7 @@ async def process_contact_and_all_data(message: types.Message, state: FSMContext
 
 
 async def cancel_handler(message: types.Message, state: FSMContext):
-	# await state.finish()
+	await state.finish()
 	user_id = message.chat.id
 	user_status = connection.checkUserStatus(user_id)
 

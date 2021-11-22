@@ -5,9 +5,19 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from .. import buttons, config, connection, file_ids, getLocationInfo
 
+
 bot = Bot(token=config.TOKEN, parse_mode = 'html')
 
 
+def fast_answer(func):
+	async def wrapper(c: types.CallbackQuery, state: FSMContext):
+		await c.answer()
+		
+		return 	await func(c, state)
+	return wrapper
+
+
+@fast_answer
 async def callback_zak(c: types.CallbackQuery, state: FSMContext):
 	user_id = c.from_user.id
 	user_name = c.from_user.first_name
@@ -22,6 +32,7 @@ async def callback_zak(c: types.CallbackQuery, state: FSMContext):
 		connection.UpdateUserStatus('customer', user_id)
 
 
+@fast_answer
 async def callback_isp(c: types.CallbackQuery, state: FSMContext):
 	user_id = c.from_user.id
 	user_name = c.from_user.first_name
@@ -36,64 +47,42 @@ async def callback_isp(c: types.CallbackQuery, state: FSMContext):
 		connection.UpdateUserStatus('executor', user_id)
 
 
+@fast_answer
 async def callback_auth(c: types.CallbackQuery, state: FSMContext):
 	await bot.send_message(c.from_user.id, "Как Вы хотите авторизоваться?", reply_markup = buttons.btn2)
 
 
-async def callback_ref(c: types.CallbackQuery, state: FSMContext):
-	user_id = c.from_user.id
+# @fast_answer
+# async def callback_refresh(c: types.CallbackQuery, state: FSMContext):
+# 	user_id = c.from_user.id
+# 	await bot.answer_callback_query(c.id, show_alert = False, text = "Обновлено")
 
-	try:
-		ref_actives = connection.getRefActives(user_id)
-		for i in ref_actives[0]:
-			if connection.checkRegStatus(i) or connection.checkExecutor(i):
-				connection.addActiveReferral(user_id)
-				connection.setActiveUser(i)
-	except Exception as e:
-		print(e)
+# 	try:
+# 		ref_actives = connection.getRefActives(user_id)
+# 		for i in ref_actives[0]:
+# 			if connection.checkRegStatus(i) or connection.checkExecutor(i):
+# 				connection.addActiveReferral(user_id)
+# 				connection.setActiveUser(i)
 
-	referral = connection.checkReferral(user_id)
-	await bot.send_photo(
-		chat_id = c.from_user.id, 
-		photo = file_ids.PHOTO['bank'],
-		caption = f"<b>Баланс:</b> <code>{referral[6]} ₽</code>\n\n"
-				  f"<b>Купон VALYVE:</b> <code>0 шт</code>\n\n"
-				  f"<b>Реферальная система</b>\n"
-				  f"├ <b>Активных:</b> <code>{referral[5]} уч</code>\n"
-				  f"└ <b>Ожидание:</b> <code>{referral[4]} уч</code>\n\n"
-				  f"🗣 <b>Пригласительная ссылка</b>\n"
-				  f"└ <a href='https://t.me/ValyveExchange_bot?start={user_id}'>Зажми чтоб скопировать</a>",
-					reply_markup = buttons.referral_settings)
-
-async def callback_refresh(c: types.CallbackQuery, state: FSMContext):
-	user_id = c.from_user.id
-	await bot.answer_callback_query(c.id, show_alert = False, text = "Обновлено")
-
-	try:
-		ref_actives = connection.getRefActives(user_id)
-		for i in ref_actives[0]:
-			if connection.checkRegStatus(i) or connection.checkExecutor(i):
-				connection.addActiveReferral(user_id)
-				connection.setActiveUser(i)
-
-		referral = connection.checkReferral(user_id)		
-		await bot.edit_message_media(media = types.InputMedia(
-					type = 'photo', 
-					media = file_ids.PHOTO['bank'], 
-					caption  = 	f"Баланс: {referral[6]} ₽\n\n"
-								f"👥 Реферальная система\n"
-								f"├ Активных: {referral[5]} уч\n"
-								f"└ Ожидание: {referral[4]} уч\n\n"
-								f"🗣 Пригласительная ссылка\n"
-								f"└ <a href='https://t.me/ValyveExchange_bot?start={user_id}'>Зажми чтоб скопировать</a>"),
-									chat_id = c.message.chat.id,
-									message_id = c.message.message_id,
-									reply_markup = buttons.referral_settings
-										)
-	except Exception as e:
-		print(e)
+# 		referral = connection.checkReferral(user_id)		
+# 		await bot.edit_message_media(media = types.InputMedia(
+# 					type = 'photo', 
+# 					media = file_ids.PHOTO['bank'], 
+# 					caption  = 	f"Баланс: {referral[6]} ₽\n\n"
+# 								f"👥 Реферальная система\n"
+# 								f"├ Активных: {referral[5]} уч\n"
+# 								f"└ Ожидание: {referral[4]} уч\n\n"
+# 								f"🗣 Пригласительная ссылка\n"
+# 								f"└ <a href='https://t.me/ValyveExchange_bot?start={user_id}'>Зажми чтоб скопировать</a>"),
+# 									chat_id = c.message.chat.id,
+# 									message_id = c.message.message_id,
+# 									reply_markup = buttons.referral_settings
+# 										)
+# 	except Exception as e:
+# 		print(e)
 
 
+@fast_answer
 async def callback_support(c: types.CallbackQuery, state: FSMContext):
 	await bot.send_photo(c.from_user.id, photo = file_ids.PHOTO['support'], caption = "👱🏼‍♂️ <b>Основатель</b>\n"
 																						 " └ @geovet04\n\n"
@@ -103,6 +92,7 @@ async def callback_support(c: types.CallbackQuery, state: FSMContext):
 
 																						 "👨🏻‍💻 <b>Разработчик</b>\n"
 																						 " └ @MurodillaKarimov")
+
 
 async def callback_back(c: types.CallbackQuery, state: FSMContext):
 	try:
@@ -121,6 +111,7 @@ async def callback_back(c: types.CallbackQuery, state: FSMContext):
 
 
 		else:
+			await c.answer()
 			await bot.edit_message_text(chat_id = c.from_user.id, 	
 									message_id = c.message.message_id,
 									text =	f"<b>Заказчик:</b> <code>{orders[1]}</code>\n"
@@ -142,9 +133,11 @@ async def callback_back(c: types.CallbackQuery, state: FSMContext):
 			await bot.answer_callback_query(c.id, show_alert = False, text = "❗️Вы находитесь на первом каталоге списка")	
 
 		else:
+			await c.answer()			
 			await bot.delete_message(c.from_user.id, c.message.message_id)
 			await bot.send_message(c.from_user.id, "Отправьте мне свою геолокацию, чтоб я мог показать объявления в Вашем регионе.", reply_markup = buttons.send_geo)
 			await RegExecutor.step6.set()
+
 
 
 async def callback_nex(c: types.CallbackQuery, state: FSMContext):
@@ -157,7 +150,7 @@ async def callback_nex(c: types.CallbackQuery, state: FSMContext):
 			lon = data['long']			
 			orders = connection.selectAllOrders(lat, lon)[pag]
 
-
+		await c.answer()
 		await bot.edit_message_text(chat_id = c.from_user.id, 	
 							message_id = c.message.message_id,
 							text = 	f"<b>Заказчик:</b> <code>{orders[1]}</code>\n"
@@ -181,9 +174,11 @@ async def callback_nex(c: types.CallbackQuery, state: FSMContext):
 																			 "Вы просмотрели все объявление. Зайдите позже, мы обязательно что-то подберём для вас!")
 
 		else:
+			await c.answer()
 			await bot.delete_message(c.from_user.id, c.message.message_id)
 			await bot.send_message(c.from_user.id, "Отправьте мне свою геолокацию, чтоб я мог показать объявления в Вашем регионе.", reply_markup = buttons.send_geo)
 			await RegExecutor.step6.set()
+
 
 
 async def callback_apply(c: types.CallbackQuery, state: FSMContext):
@@ -249,6 +244,7 @@ async def callback_apply(c: types.CallbackQuery, state: FSMContext):
 		
 
 
+@fast_answer
 async def callback_approve(c: types.CallbackQuery, state: FSMContext):
 	cus_id = c.from_user.id
 	exAndOrderId = c.data[10:]
@@ -324,7 +320,7 @@ async def callback_refusal(c: types.CallbackQuery, state: FSMContext):
 																		"Вы уже отклонили этого исполнителя!")
 
 
-
+@fast_answer
 async def callback_view(c: types.CallbackQuery, state: FSMContext):
 	async with state.proxy() as data:
 		await bot.delete_message(c.from_user.id, data['msgId'])
@@ -367,11 +363,13 @@ async def callback_view(c: types.CallbackQuery, state: FSMContext):
 																	reply_markup = buttons.requestButton(ex_id, order_id, contact))
 
 
+@fast_answer
 async def callback_no_view(c: types.CallbackQuery, state: FSMContext):
 	async with state.proxy() as data:
 		await bot.delete_message(c.from_user.id, data['msgId'])
 
 
+@fast_answer
 async def callback_view_vacancy(c: types.CallbackQuery, state: FSMContext):
 	ex_id = c.from_user.id
 	vacancy = c.data[6:]
@@ -394,6 +392,7 @@ async def callback_view_vacancy(c: types.CallbackQuery, state: FSMContext):
 								  f"{item[7]}")
 
 
+@fast_answer
 async def callback_get_geo(c: types.CallbackQuery, state: FSMContext):
 	ids = c.data[7:].split(',')
 	cus_id = ids[0]
@@ -412,8 +411,8 @@ def register_callback_handlers(dp: Dispatcher):
 	dp.register_callback_query_handler(callback_zak, lambda c: c.data == 'zak',  state = '*')    
 	dp.register_callback_query_handler(callback_isp, lambda c: c.data == 'isp',  state = '*')    
 	dp.register_callback_query_handler(callback_auth, lambda c: c.data == 'auth',  state = '*')
-	dp.register_callback_query_handler(callback_ref, lambda c: c.data == 'ref',  state = '*')
-	dp.register_callback_query_handler(callback_refresh, lambda c: c.data == 'refresh',  state = '*')
+	# dp.register_callback_query_handler(callback_bank, lambda c: c.data == 'bank',  state = '*')
+	# dp.register_callback_query_handler(callback_refresh, lambda c: c.data == 'refresh',  state = '*')
 	dp.register_callback_query_handler(callback_support, lambda c: c.data == 'support',  state = '*')
 
 	dp.register_callback_query_handler(callback_back, lambda c: c.data.startswith('back'),  state = '*') 

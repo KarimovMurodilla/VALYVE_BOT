@@ -1,19 +1,28 @@
 import random
+from captcha.image import ImageCaptcha
+from app import config
 
 
-
+image = ImageCaptcha(width=280, height=90)
+symbols = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
 
 def process_captcha():
-	data = {}
-	cap1 = ['AgACAgIAAxkBAANCYW3QlRuTAc7HbVZvwSBuoAy53skAAiWzMRv-OaFIAsBKg2PydDkBAAMCAANtAAMhBA', 'Z8hC2']
-	cap2 = ['AgACAgIAAxkBAANDYW3Qr6eSnRNNyxapa9DankSwOgEAAiazMRv-OaFIZSQ03gIZhiwBAAMCAANtAAMhBA', 'uguh']
-	cap4 = ['AgACAgIAAxkBAANEYW3QyMg_rfiCJT_ED9uW73nQXrIAAiizMRv-OaFIehz0RUuyJwUBAAMCAANtAAMhBA', 'vdma']
-	cap5 = ['AgACAgIAAxkBAANFYW3Q2mS5hJwMiavfvGJsJciGdx0AAiGzMRv-OaFICfi96ti3z6QBAAMCAANtAAMhBA', 'cDaBaW']
+	random.shuffle(symbols)
+	captcha_text = ''.join(symbols)[:6]
+
+	data = image.generate(captcha_text)
+	img = image.write(captcha_text, f'{config.CAPTCHA_PHOTO_PATH}{captcha_text}.png')
+
+	return captcha_text
+
+
+# def process_captcha():
+# 	cap1 = ['AgACAgIAAxkBAANCYW3QlRuTAc7HbVZvwSBuoAy53skAAiWzMRv-OaFIAsBKg2PydDkBAAMCAANtAAMhBA', 'Z8hC2']
+# 	cap2 = ['AgACAgIAAxkBAANDYW3Qr6eSnRNNyxapa9DankSwOgEAAiazMRv-OaFIZSQ03gIZhiwBAAMCAANtAAMhBA', 'uguh']
+# 	cap4 = ['AgACAgIAAxkBAANEYW3QyMg_rfiCJT_ED9uW73nQXrIAAiizMRv-OaFIehz0RUuyJwUBAAMCAANtAAMhBA', 'vdma']
+# 	cap5 = ['AgACAgIAAxkBAANFYW3Q2mS5hJwMiavfvGJsJciGdx0AAiGzMRv-OaFICfi96ti3z6QBAAMCAANtAAMhBA', 'cDaBaW']
 	
-	c = cap1, cap2, cap4, cap5
-	cap = random.choice(c)
+# 	c = cap1, cap2, cap4, cap5
+# 	cap = random.choice(c)
 
-	return cap
-
-# t = process_captcha(1234)
-# print(t[0])
+# 	return cap

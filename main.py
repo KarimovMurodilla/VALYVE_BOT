@@ -28,6 +28,8 @@ from app.admin.admin_querys import register_admin_inline_mode_handlers
 
 from app.filters.filter import register_filter_handlers
 
+# from app.handlers.bank_project import register_bank_handlers
+
 
 
 
@@ -64,6 +66,8 @@ async def main():
 	register_admin_inline_mode_handlers(dp)
 	
 	register_filter_handlers(dp)
+
+	# register_bank_handlers()
 	
 
 	await set_commands(bot)

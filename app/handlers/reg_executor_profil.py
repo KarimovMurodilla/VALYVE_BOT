@@ -86,23 +86,28 @@ async def process_create3(message: types.Message, state: FSMContext):
 		
 
 	await RegExecutor.next()
-	await bot.send_message(message.chat.id, "Отправьте мне Ваш номер телефона, для связи по работе.",
+	msg = await bot.send_message(message.chat.id, "Отправьте мне Ваш номер телефона, для связи по работе.",
 		reply_markup = buttons.contact_ex)
-		
+	
+	async with state.proxy() as data:
+		data['msg_id'] = msg.message_id
+
 
 async def process_contact_invalid(message: types.Message, state: FSMContext):
-	await bot.send_message(message.chat.id, "Отправьте мне Ваш номер телефона, для связи по работе.",
+	msg = await bot.send_message(message.chat.id, "Отправьте мне Ваш номер телефона, для связи по работе.",
 		reply_markup = buttons.contact_ex)
-
+	
+	async with state.proxy() as data:
+		data['msg_id'] = msg.message_id
 
 
 async def process_create4(message: types.Message, state: FSMContext):
 	async with state.proxy() as data:
 		data['contact'] = message.contact.phone_number
-		data['msg_id'] = message.message_id-1
+		msg_id = data['msg_id']
 
 	await RegExecutor.next()
-	await bot.send_message(message.chat.id, '.', reply_markup = buttons.back_canc)
+	await bot.delete_message(message.chat.id, msg_id)
 	await bot.send_message(message.chat.id, "Хотите ли Вы указать свои навыки?",
 		reply_markup = buttons.yes_no)
 
