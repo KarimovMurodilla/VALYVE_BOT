@@ -16,6 +16,7 @@ p2p = QiwiP2P(auth_key = config.QIWI_TOKEN)
 
 class CreateOrder(StatesGroup):
 	step1 = State()
+	new_step = State()
 	step2 = State()
 	step3 = State()
 	step4 = State()
@@ -84,7 +85,7 @@ async def process_output_location(message: types.Message, state: FSMContext):
 
 
 @checkStatus
-async def process_output_position(message: types.Message, state: FSMContext):
+async def process_output_payment_for_waiting(message: types.Message, state: FSMContext):
 	await CreateOrder.next()
 
 	try:
@@ -92,16 +93,40 @@ async def process_output_position(message: types.Message, state: FSMContext):
 			comment = data['comment']
 			data['position'] = message.text
 			
-			await bot.send_message(message.chat.id, "На какое кол-в дней вам нужен сотрудник?",
+			await bot.send_message(message.chat.id, "Отправьте мне сколько вы будете платить за 1 день ожидание.",
 				reply_markup = buttons.skipBtn())
-
 
 
 	except:
 		async with state.proxy() as data:
 			data['position'] = message.text
 
-			await bot.send_message(message.chat.id, "На какое кол-в дней вам нужен сотрудник?")
+			await bot.send_message(message.chat.id, "Отправьте мне сколько вы будете платить за 1 день ожидание.")
+
+@checkStatus
+async def process_output_position(message: types.Message, state: FSMContext):
+	try:
+		if message.text.isdigit():
+
+			async with state.proxy() as data:
+				comment = data['comment']
+				data['payment_for_waiting'] = message.text
+				
+				await bot.send_message(message.chat.id, "На какое кол-в дней вам нужен сотрудник?", reply_markup = buttons.skipBtn())
+				await CreateOrder.next()		
+		else:
+			await message.answer("Введите только цифрами!")
+
+	except:
+		if message.text.isdigit():
+			async with state.proxy() as data:
+				data['payment_for_waiting'] = message.text
+
+				await bot.send_message(message.chat.id, "На какое кол-в дней вам нужен сотрудник?")
+				await CreateOrder.next()		
+
+		else:
+			await message.answer("Введите только цифрами!")
 
 
 @checkStatus
@@ -287,15 +312,18 @@ async def process_output_without_comment(c: types.CallbackQuery, state: FSMConte
 async def cSkip_output_location(c: types.CallbackQuery, state: FSMContext):
 	await CreateOrder.next()
 
-	await bot.delete_message(c.from_user.id, c.message.message_id)
-	
-	# async with state.proxy() as data:
-	# 	data['location_lat'] = data
-	# 	data['location_long'] = message.location.longitude
-	# 	data['adress_info'] = getLocationInfo.location_info(f"{data['location_long']} {data['location_lat']}")	
-	# 	await CreateOrder.next()
+	await c.message.delete()
+	await bot.delete_message(c.from_user.id, c.message.message_id-1)
 
 	await bot.send_message(c.from_user.id, "Отправьте мне название должности.",
+		reply_markup = buttons.skipBtn())
+
+
+async def cSkip_output_payment_for_waiting(c: types.CallbackQuery, state: FSMContext):
+	await CreateOrder.next()
+
+	await c.message.delete()
+	await bot.send_message(c.from_user.id, "Отправьте мне сколько вы будете платить за 1 день ожидание.",
 		reply_markup = buttons.skipBtn())
 
 
@@ -304,11 +332,6 @@ async def cSkip_output_position(c: types.CallbackQuery, state: FSMContext):
 	await CreateOrder.next()
 
 	await bot.delete_message(c.from_user.id, c.message.message_id)
-
-	# async with state.proxy() as data:
-	# 	data['position'] = message.text
-	# 	await CreateOrder.next()
-
 	await bot.send_message(c.from_user.id, "На какое кол-в дней Вам нужен сотрудник?",
 		reply_markup = buttons.skipBtn())
 
@@ -370,60 +393,53 @@ async def cSkip_output_respons(c: types.CallbackQuery, state: FSMContext):
 
 @checkStatus
 async def process_get_publish(c: types.CallbackQuery, state: FSMContext):
-	await bot.send_photo(
-		chat_id = c.message.chat.id, 
-		photo = file_ids.PHOTO['price'],
-		caption = "<b>1.</b> <code>3</code> дня в ленте - <code>50.0</code> <code>₽</code>\n"
-				  "<b>2.</b> <code>7</code> дней в ленте - <code>80.0</code> <code>₽</code>\n"
-				  "<b>3.</b> <code>30</code> дней в ленте - <code>270.0</code> <code>₽</code>\n",
-					reply_markup = buttons.menuPrice())
+	async with state.proxy() as data:
+		allowance = int(data['payment_for_waiting'])
+
+		frst = int(admin_connection.selectIcOneTime()[0][0])
+		scnd = int(admin_connection.selectIcOneTime()[1][0])
+		thrd = int(admin_connection.selectIcOneTime()[2][0])
+
+		total_1 = allowance*frst+25*frst
+		total_2 = allowance*scnd+25*scnd
+		total_3 = allowance*thrd+25*thrd
+
+		await bot.send_photo(
+			chat_id = c.message.chat.id, 
+			photo = file_ids.PHOTO['price'],
+			caption = f"<b>1.</b> <code>30</code> дня в ленте - <code>{total_1}</code> <code>₽</code>\n"
+					  f"<b>2.</b> <code>90</code> дней в ленте - <code>{total_2}</code> <code>₽</code>\n"
+					  f"<b>3.</b> <code>180</code> дней в ленте - <code>{total_3}</code> <code>₽</code>\n",
+						reply_markup = buttons.menuPrice(total_1, total_2, total_3))
 
 
 @checkStatus
-async def process_pay_50(c: types.CallbackQuery, state: FSMContext):
-	price = c.data[6:]
-	user_id = c.from_user.id
-	
-	comment = (f"{user_id}_{random.randint(1000, 9999)}")
-	bill = p2p.bill(amount=50, lifetime=15, comment=comment)
+async def process_pay(c: types.CallbackQuery, state: FSMContext):
+	try:
+		ids = c.data[6:].split(',')
+		days = ids[0]
+		total = ids[1]
+		async with state.proxy() as data:
+			data['actual_days'] = days
+			allowance = int(data['payment_for_waiting'])
 
-	await bot.send_message(c.from_user.id, f"<b>Информация по оплате</b>\n\n<b>Вы покупаете:</b> <code>3 дней в ленте</code>\n <b>К оплате:</b> <code>50.0 ₽</code>", reply_markup = buttons.showPayment(bill_id = bill.bill_id, url = bill.pay_url, price = price))
-
-
-@checkStatus
-async def process_pay_80(c: types.CallbackQuery, state: FSMContext):
-	price = c.data[6:]
-	user_id = c.from_user.id
-	
-	comment = (f"{user_id}_{random.randint(1000, 9999)}")
-	bill = p2p.bill(amount=80, lifetime=15, comment=comment)
-
-	await bot.send_message(c.from_user.id, f"<b>Информация по оплате</b>\n\n<b>Вы покупаете:</b> <code>7 дней в ленте</code>\n <b>К оплате:</b> <code>80.0 ₽</code>", reply_markup = buttons.showPayment(bill_id = bill.bill_id, url = bill.pay_url, price = price))
+		
+			await bot.send_message(c.from_user.id, f"<b>Информация по оплате</b>\n\n<b>Вы покупаете:</b> <code>{days} дней в ленте</code>\n <b>К оплате:</b> <code>{total} ₽</code>", 
+				reply_markup = buttons.to_pay(total))
+	except:
+		await c.message.delete()
 
 
-@checkStatus
-async def process_pay_270(c: types.CallbackQuery, state: FSMContext):
-	price = c.data[6:]
-	user_id = c.from_user.id
-	
-	comment = (f"{user_id}_{random.randint(1000, 9999)}")
-	bill = p2p.bill(amount=270, lifetime=15, comment=comment)
-
-	await bot.send_message(c.from_user.id, f"<b>Информация по оплате</b>\n\n<b>Вы покупаете:</b> <code>30 дней в ленте</code>\n <b>К оплате:</b> <code>270.0 ₽</code>", reply_markup = buttons.showPayment(bill_id = bill.bill_id, url = bill.pay_url, price = price))
-
-
-@checkStatus
 async def check_payment(c: types.CallbackQuery, state: FSMContext):
 	try:
 		user_id = c.from_user.id
-		ids = c.data[6:].split(',')
-		bill = ids[0]
-		price = ids[1]
+		price = int(c.data[10:])
 		today = datetime.datetime.today()
 		dmy = datetime.datetime.today().strftime('%d.%m.%Y')
+		user_balance = int(connection.get_id(user_id)[6])
 			
 
-		if str(p2p.check(bill_id = bill).status) == "PAID":
+		if user_balance >= price:
 			async with state.proxy() as data:
 				order_id = len(connection.selectOrders(user_id))
 				cus_name = connection.getCustomerName(user_id)
@@ -438,19 +454,22 @@ async def check_payment(c: types.CallbackQuery, state: FSMContext):
 				cus_lat = data['location_lat']
 				cus_long = data['location_long']
 				order_status = 'На модерации'
+				allowance = data['payment_for_waiting']
+				actual_days = data['actual_days']
 
 				connection.regResponses(user_id, order_id, None, None)
 
 				await bot.delete_message(c.message.chat.id, c.message.message_id)
 
-			connection.addPayment(c.from_user.id, price, dmy)
-			connection.createNewOrder(user_id, cus_name[0], cus_adress, cus_work_graphic, cus_work_day, cus_bid, cus_position, cus_comment, cus_lat, cus_long, dmy, order_status, order_id, price, requirement, respons)
+			connection.updateBalance(user_id, price, '-')
+			connection.createNewOrder(user_id, cus_name[0], cus_adress, cus_work_graphic, cus_work_day, cus_bid, cus_position, cus_comment, cus_lat, cus_long, dmy, order_status, order_id, price, requirement, respons, actual_days)
 
 			await bot.answer_callback_query(c.id, show_alert = True, text = "🔔 <b>Уведомление:</b>\n\nПоздравляю, оплата прошла успешно!")
-			await bot.send_message(c.from_user.id, "Главное меню", reply_markup = buttons.menu_customer)
+			await bot.send_message(c.from_user.id, "Главное меню")
 			await state.finish()
 		else:
-			await bot.answer_callback_query(c.id, show_alert = True, text = "❗️Вы не оплатили счет!")
+			await bot.answer_callback_query(c.id, show_alert = True, text = "⚠️ Ошибка:\n\n"
+																		    "У вас недостаточно средств")
 
 	except Exception as e:
 		print(e)
@@ -463,6 +482,7 @@ def register_reg_order_handlers(dp: Dispatcher):
 	dp.register_callback_query_handler(process_get_publish, lambda c: c.data == 'publish',  state = '*')
 
 	dp.register_message_handler(process_output_location, content_types = ['location','venue'], state = CreateOrder.step1)
+	dp.register_message_handler(process_output_payment_for_waiting,  state = CreateOrder.new_step)
 	dp.register_message_handler(process_output_position, state = CreateOrder.step2)
 	dp.register_message_handler(process_output_days, state = CreateOrder.step3)
 	dp.register_message_handler(process_output_graphic, state = CreateOrder.step4)
@@ -473,13 +493,12 @@ def register_reg_order_handlers(dp: Dispatcher):
 	dp.register_callback_query_handler(process_output_without_comment, lambda c: c.data == 'skip', state = CreateOrder.step8)
 
 
-	dp.register_callback_query_handler(process_pay_50, lambda c: c.data == 'price_50',  state = '*')
-	dp.register_callback_query_handler(process_pay_80, lambda c: c.data == 'price_80',  state = '*')
-	dp.register_callback_query_handler(process_pay_270, lambda c: c.data == 'price_270',  state = '*')
-	# dp.register_callback_query_handler(check_payment, lambda c: c.data.startswith('check'),  state = '*')
+	dp.register_callback_query_handler(process_pay, lambda c: c.data.startswith('price'),  state = '*')
+	dp.register_callback_query_handler(check_payment, lambda c: c.data.startswith('pay_order'),  state = '*')
 
 
 	dp.register_callback_query_handler(cSkip_output_location, lambda c: c.data == 'cSkip', state = CreateOrder.step1)
+	dp.register_callback_query_handler(cSkip_output_payment_for_waiting, lambda c: c.data == 'cSkip',  state = CreateOrder.new_step)
 	dp.register_callback_query_handler(cSkip_output_position, lambda c: c.data == 'cSkip', state = CreateOrder.step2)
 	dp.register_callback_query_handler(cSkip_output_days, lambda c: c.data == 'cSkip', state = CreateOrder.step3)
 	dp.register_callback_query_handler(cSkip_output_graphic, lambda c: c.data == 'cSkip', state = CreateOrder.step4)

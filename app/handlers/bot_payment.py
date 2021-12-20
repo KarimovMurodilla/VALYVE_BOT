@@ -188,7 +188,7 @@ async def check_payment(c: types.CallbackQuery, state: FSMContext):
 
 		if str(p2p.check(bill_id = bill).status) == "PAID":
 
-			connection.addBalance(user_id, price)
+			connection.updateBalance(user_id, price, '+')
 			connection.addPayment(user_id, 'balance', price, dmy)
 
 			await c.message.delete()

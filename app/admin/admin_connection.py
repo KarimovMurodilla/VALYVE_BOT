@@ -13,31 +13,6 @@ with sql.connect(config.DB_ADMIN_PATH, check_same_thread=False) as con2:
 
 
 
-def createAdminTable():
-	cur2.execute("""CREATE TABLE IF NOT EXISTS admin_table(
-				name TEXT,
-				status TEXT
-				)""")
-	con2.commit()
-
-
-def createProfilTable():
-	cur2.execute("""CREATE TABLE IF NOT EXISTS request_profils(
-				user_id INT,
-				status TEXT,
-				user_name TEXT,
-				user_pic TEXT,
-				user_contact TEXT,
-				user_date_of_birth TEXT,
-				user_skill TEXT
-				)""")
-	con2.commit()
-
-
-createAdminTable()
-createProfilTable()
-
-
 today = datetime.datetime.today()
 week = today - datetime.timedelta(days=7)
 
@@ -68,7 +43,7 @@ def ordersByWeek():
 
 
 def selectOrdersWhereInModeration():
-	sowim = cur.execute("SELECT * FROM orders WHERE order_status = 'На модерации'").fetchall()
+	sowim = cur.execute("SELECT * FROM orders WHERE order_status = 'На модерации' OR order_status = 'Пересмотр'").fetchall()
 	return sowim
 
 # ----------ADMIN_TABLE--------
@@ -110,6 +85,44 @@ def selectRequestsProfil():
 
 
 def deleteRequestsProfil(user_id, status):
-	cur2.execute("DELETE FROM request_profils WHERE user_id = ? AND status = ?", (user_id, status,)).fetchall()
+	cur2.execute("DELETE FROM request_profils WHERE user_id = ? AND status = ?", (user_id, status,))
 	con2.commit()
 
+
+def addComplaint(ex_id, cus_id, order_id, cause):
+	cur2.execute("INSERT INTO complaints_for_review (ex_id, cus_id, order_id, cause)VALUES(?,?,?,?)", (ex_id, cus_id, order_id, cause,))
+	con2.commit()
+
+
+# -----COMPLAINTS-----
+def addUserComplaint(user_id, complaint):
+	cur2.execute("INSERT INTO complaints_for_user (user_id, cause)VALUES(?,?)", (user_id, complaint,))
+	con2.commit()
+
+
+# ----BANK CONTROL TABLE----
+def selectIcOneTime():
+	siot = cur2.execute("SELECT * FROM bank_control_table WHERE ic_one_time").fetchall()
+	return siot
+
+
+def updateIcOneTime(ic_one_time, rowid):
+	cur2.execute("UPDATE bank_control_table SET ic_one_time = ? WHERE rowid = ?", (ic_one_time, rowid,))
+	con2.commit()
+
+
+# ----COMPLAINT FOR REVIEW----
+def getComplaintsFromReview():
+	result = cur2.execute("SELECT * FROM complaints_for_review").fetchall()
+	return result
+
+
+def deleteComplaintForReview(ex_id, cus_id, order_id):
+	cur2.execute("DELETE FROM complaints_for_review WHERE ex_id = ? AND cus_id = ? AND order_id = ?", (ex_id, cus_id, order_id,))
+	con2.commit()
+
+
+# ----COMPLAINT FOR REVIEW----
+def getComplaintsFromUser():
+	result = cur2.execute("SELECT * FROM complaints_for_user").fetchall()
+	return result

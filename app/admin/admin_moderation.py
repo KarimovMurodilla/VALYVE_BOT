@@ -22,6 +22,7 @@ class EditOrder(StatesGroup):
 	step8 = State()
 	step9 = State()
 
+
 class EditCustomerProfil(StatesGroup):
 	step1 = State()
 	step2 = State()
@@ -35,6 +36,13 @@ class EditExecutorProfil(StatesGroup):
 	step3 = State()
 	step4 = State()
 	step5 = State()
+
+
+class ProcessCDelete(StatesGroup):
+	step1 = State()
+	step2 = State()
+	step3 = State()
+	step4 = State()
 
 
 async def order_requests(c: types.CallbackQuery, state: FSMContext):
@@ -60,7 +68,8 @@ async def order_requests(c: types.CallbackQuery, state: FSMContext):
 			f"{orders[7]}",
 				reply_markup = admin_buttons.requestOrderBtns(orders[0], orders[12]))
 
-	except:
+	except Exception as e:
+		print(e)
 		await bot.answer_callback_query(c.id, show_alert = True, text = "Ничего не найдено")	
 
 
@@ -133,20 +142,23 @@ async def callbackApprove(c: types.CallbackQuery, state: FSMContext):
 	order_id = ids[1]
 	today = datetime.datetime.today()
 
-	if connection.selectOrderWhereCusId(cus_id, order_id)[13] == 50:
-		deletion_date = today + datetime.timedelta(days=3)
-		connection.UpdateOrderStatus(cus_id, order_id, "Опубликован", str(deletion_date)[:10])
-		await bot.answer_callback_query(c.id, show_alert = True, text = "✅ Этот заказ опубликован")
+	if connection.selectOrderWhereCusId(cus_id, order_id)[11] == 'Отклонён':
+		await c.answer("⚠️ Ошибка:\n\nЭтот заказ уже oтклонён")
 
-	elif connection.selectOrderWhereCusId(cus_id, order_id)[13] == 80:
-		deletion_date = today + datetime.timedelta(days=7)
-		connection.UpdateOrderStatus(cus_id, order_id, "Опубликован", str(deletion_date)[:10])
-		await bot.answer_callback_query(c.id, show_alert = True, text = "✅ Этот заказ опубликован")
 
-	elif connection.selectOrderWhereCusId(cus_id, order_id)[13] == 270:
-		deletion_date = today + datetime.timedelta(days=30)
-		connection.UpdateOrderStatus(cus_id, order_id, "Опубликован", str(deletion_date)[:10])
-		await bot.answer_callback_query(c.id, show_alert = True, text = "✅ Этот заказ опубликован")
+	else:
+		if connection.selectOrderWhereCusId(cus_id, order_id)[11] == 'На модерации':
+			actual_days = int(connection.selectOrderWhereCusId(cus_id, order_id)[16])
+			deletion_date = today + datetime.timedelta(days=actual_days)
+			connection.UpdateOrderStatus(cus_id, order_id, "Опубликован", str(deletion_date)[:10])
+			await bot.answer_callback_query(c.id, show_alert = True, text = "✅ Этот заказ опубликован")
+
+
+		else:
+			actual_days = int(connection.selectOrderWhereCusId(cus_id, order_id)[16])
+			deletion_date = today + datetime.timedelta(days=actual_days)
+			connection.UpdateOrderStatus(cus_id, order_id, "Опубликован", str(deletion_date)[:10])
+			await bot.answer_callback_query(c.id, show_alert = True, text = "✅ Этот заказ опубликован")
 
 
 async def callbackReject(c: types.CallbackQuery, state: FSMContext):
@@ -154,8 +166,12 @@ async def callbackReject(c: types.CallbackQuery, state: FSMContext):
 	cus_id = ids[0]
 	order_id = ids[1]
 
-	connection.UpdateOrderStatus(cus_id, order_id, "Отклонён", None)
-	await bot.answer_callback_query(c.id, show_alert = True, text = "🗑 Этот заказ отклонён")
+	if connection.selectOrderWhereCusId(cus_id, order_id)[11] == 'Опубликован':
+		await c.answer("⚠️ Ошибка:\n\nЭтот заказ уже опубликован")
+
+	else:
+		connection.UpdateOrderStatus(cus_id, order_id, "Отклонён", None)
+		await bot.answer_callback_query(c.id, show_alert = True, text = "🗑 Этот заказ отклонён")
 
 
 
@@ -884,6 +900,182 @@ async def process_create5(message: types.Message, state: FSMContext):
 						  	reply_markup = admin_buttons.requestProfilBtns(ex_id, 'executor', show_pagination = False))
 
 
+# ---COMPLAINTS----
+async def view_complaint(c: types.CallbackQuery, state: FSMContext):
+	data = admin_connection.getComplaintsFromReview()
+	data_1 = admin_connection.getComplaintsFromUser()
+
+	try:
+		if data[0] or data_1[0]:
+			for n in range(len(data)):
+				await c.message.answer( 
+					f"<b>Заказчик:</b> <code>{connection.selectAll(data[n][1])[0]}</code>\n"
+					f"<b>Адрес:</b> <code>{connection.selectOrderWhereCusId(data[n][1], data[n][2])[2]}</code>\n\n"
+
+					f"<a href='https://t.me/ValyveExchange_bot?start={data[n][1]}_{data[n][2]}'>Просмотреть заказ</a>\n\n"
+
+					f"<b>Отзыв:</b>\n<code>{connection.selectReview(str(data[n][0]), str(data[n][1]), str(data[n][2]))[1]}</code>\n\n",
+						disable_web_page_preview = True)
+				await c.message.answer(
+					"<b>Причина:</b>\n"
+					f"<code>{data[n][3]}</code>",
+						reply_markup = admin_buttons.showReviewComplaintsBtns(data[n][0], data[n][1], data[n][2]))
+
+	except Exception as e:
+		if data_1[0]:
+			await c.answer()
+
+		else:
+			await c.answer("Пусто!")
+
+
+	try:
+		for i in range(len(data_1)):
+			alldata = connection.getExecutorProfil(data_1[i][0])
+			await bot.send_photo(c.from_user.id, photo = alldata[3], caption = f"<b>{alldata[1]}</b>\n\n"
+																				f"  <b>Дата рождения:</b> <code>{alldata[2]}</code>\n"
+																				f"  <b>Номер:</b> <code>+{alldata[4]}</code>\n\n"
+
+																				f"<b>Навыки:</b>\n{alldata[5]}\n\n" 
+																				f"  <b>Рейтинг:</b> <code>{alldata[6]}</code>",
+																					reply_markup = admin_buttons.showUserComplaintsBtns(None, None, None))
+	except Exception as e:
+		print(type(e))
+		if type(e) == IndexError:
+			await c.answer("Пусто!")
+
+		else:
+			await bot.send_video(
+				chat_id = c.from_user.id, video = alldata[3], caption = 
+					f"<b>{alldata[1]}</b>\n\n"
+					f"  <b>Рейтинг:</b> <code>{alldata[6]}</code>\n\n"
+					f"<b>Навыки:</b>\n{alldata[5]}",
+						reply_markup = admin_buttons.showUserComplaintsBtns(None, None, None)
+				)
+
+
+
+async def callback_cdelete(c: types.CallbackQuery, state: FSMContext):
+	ids = c.data[8:].split(',')
+	await ProcessCDelete.step1.set()
+
+	async with state.proxy() as data:
+		data['ex_id'] = ids[0]
+		data['cus_id'] = ids[1]
+		data['order_id'] = ids[2]
+
+	await c.message.answer("Отправьте мне комментарии об удалении отзывa.")
+
+
+async def input_couse_cdelete(message: types.Message, state: FSMContext):
+	async with state.proxy() as data:
+		data['cause'] = message.text
+
+		await ProcessCDelete.next()
+		await message.answer(f"Вы хотите удалить отзыв по причине '{message.text}'?",
+			reply_markup = admin_buttons.causeDelete())
+
+
+async def callbackcConfirm(c: types.CallbackQuery, state: FSMContext):
+	async with state.proxy() as data:
+		ex_id = data['ex_id']
+		cus_id = data['cus_id']
+		order_id = data['order_id']
+		cause = data['cause']
+
+	admin_connection.deleteComplaintForReview(ex_id, cus_id, order_id)
+	connection.deleteRating(ex_id, cus_id, order_id)
+
+	await c.message.delete()
+	await bot.send_message(ex_id, 
+		"🔔 <b>Уведомление:</b>\n\n"
+		f"Отзыв от <code>{connection.selectAll(cus_id)[0]}</code> "
+		f"адресу: <code>{connection.selectOrderWhereCusId(cus_id, order_id)[2]}</code> "
+		f"с текстом '<code>{connection.selectReview(str(ex_id), str(cus_id), str(order_id))[1]}</code>'. "
+		f"Был удален модерацией по причине '<code>{cause}</code>'."
+		)
+	await c.message.answer("Комментрия удалено!")
+	await state.finish()
+
+
+async def callbackcChangeCause(c: types.CallbackQuery, state: FSMContext):
+	await ProcessCDelete.step1.set()
+	await c.message.answer("Отправьте мне комментарии об удалении отзывa.")
+
+
+# ----change----
+async def callback_change_review(c: types.CallbackQuery, state: FSMContext):
+	ids = c.data[6:].split(',')
+	await ProcessCDelete.step3.set()
+
+	async with state.proxy() as data:
+		data['ex_id'] = ids[0]
+		data['cus_id'] = ids[1]
+		data['order_id'] = ids[2]
+
+	await c.message.answer("Отправьте мне текст для отзыва.")
+
+
+async def process_change_review(message: types.Message, state: FSMContext):
+	async with state.proxy() as data:
+		ex_id = data['ex_id']
+		cus_id = data['cus_id']
+		order_id = data['order_id']
+		data['new_review'] = message.text
+		
+		await ProcessCDelete.next()
+		await message.answer( 
+			f"<b>Заказчик:</b> <code>{connection.selectAll(cus_id)[0]}</code>\n"
+			f"<b>Адрес:</b> <code>{connection.selectOrderWhereCusId(cus_id, order_id)[2]}</code>\n\n"
+			
+			f"<b>Отзыв:</b>\n<code>{message.text}</code>\n\n",
+				reply_markup = admin_buttons.causeDelete())
+
+
+async def callback_cConfirm(c: types.CallbackQuery, state: FSMContext):
+	async with state.proxy() as data:
+		ex_id = data['ex_id']
+		cus_id = data['cus_id']
+		order_id = data['order_id']
+		new_review = data['new_review']
+
+	admin_connection.deleteComplaintForReview(ex_id, cus_id, order_id)
+	connection.UpdateReview(ex_id, cus_id, order_id, new_review)
+
+	await c.message.delete()
+
+	try:
+		await bot.send_message(cus_id, 
+			"🔔 <b>Уведомление:</b>\n\n"
+			f"Отзыв от <code>{connection.selectAll(cus_id)[0]}</code> "
+			f"адресу: <code>{connection.selectOrderWhereCusId(cus_id, order_id)[2]}</code> "
+			f"с текстом '<code>{connection.selectReview(str(ex_id), str(cus_id), str(order_id))[1]}</code>'. "
+			f"Был отредактирован модерацией."
+			)
+		
+		await bot.send_message(cus_id,
+			f"<b>Заказчик:</b> <code>{connection.selectAll(cus_id)[0]}</code>\n"
+			f"<b>Адрес:</b> <code>{connection.selectOrderWhereCusId(cus_id, order_id)[2]}</code>\n\n"
+			
+			f"<b>Отзыв:</b>\n<code>{new_review}</code>\n\n"
+			)
+	except Exception as e:
+		print(e)
+	
+	await c.message.answer(
+		"🔔 <b>Уведомление:</b>\n\n"
+		f"Отзыв от <code>{connection.selectAll(cus_id)[0]}</code> "
+		f"адресу: <code>{connection.selectOrderWhereCusId(cus_id, order_id)[2]}</code> "
+		f"с текстом '<code>{connection.selectReview(str(ex_id), str(cus_id), str(order_id))[1]}</code>'. "
+		f"Был успешно отредактирован!")
+
+	await state.finish()
+
+
+async def callback_cChangeCause(c: types.CallbackQuery, state: FSMContext):
+	await ProcessCDelete.step3.set()
+	await c.message.answer("Отправьте мне текст для отзыва.")
+
 
 def register_admin_moderation_handlers(dp: Dispatcher):
 	dp.register_callback_query_handler(order_requests, lambda c: c.data == 'announcement_requests',  state = '*')
@@ -931,3 +1123,15 @@ def register_admin_moderation_handlers(dp: Dispatcher):
 	dp.register_message_handler(process_contact_invalid, lambda message: not message.contact, state = EditExecutorProfil.step4)
 	dp.register_message_handler(process_create4, content_types = ['contact'], state = EditExecutorProfil.step4)
 	dp.register_message_handler(process_create5, state = EditExecutorProfil.step5)
+
+	dp.register_callback_query_handler(view_complaint, lambda c: c.data.startswith('aComplaint'), state = '*')
+	dp.register_callback_query_handler(callback_cdelete, lambda c: c.data.startswith('cDelete'), state = '*')
+	dp.register_message_handler(input_couse_cdelete, state = ProcessCDelete.step1)
+	dp.register_callback_query_handler(callbackcConfirm, lambda c: c.data.startswith('cConfirm'), state = ProcessCDelete.step2)
+	dp.register_callback_query_handler(callbackcChangeCause, lambda c: c.data.startswith('cChange'), state = ProcessCDelete.step2)
+
+	dp.register_callback_query_handler(callback_change_review, lambda c: c.data.startswith('cEdit'), state = '*')
+	dp.register_message_handler(process_change_review, state = ProcessCDelete.step3)
+	dp.register_callback_query_handler(callback_cConfirm, lambda c: c.data.startswith('cConfirm'), state = ProcessCDelete.step4)
+	dp.register_callback_query_handler(callback_cChangeCause, lambda c: c.data.startswith('cChange'), state = ProcessCDelete.step4)
+

@@ -3,25 +3,37 @@ from aiogram import types
 
 def adminPanel():
 	panel = types.ReplyKeyboardMarkup(resize_keyboard = True, row_width = 2)
-	stat = types.KeyboardButton("📊 Статистика")
-	bank = types.KeyboardButton("🏦 Банк")
-	console = types.KeyboardButton("🎛 Консоль")
-	moder = types.KeyboardButton("👨🏻‍💻 Модерация")
+	stat = types.KeyboardButton("Статистика")
+	bank = types.KeyboardButton("Банк")
+	console = types.KeyboardButton("Консоль")
+	moder = types.KeyboardButton("Модерация")
 	panel.add(stat)
 	panel.add(bank, console)
 	panel.add(moder)
 
 	return panel
 
-
-def adminConsol(sensor, sensor2):
+ 
+def adminConsol(sensor, sensor2, sensor3, sensor4):
 	consol = types.InlineKeyboardMarkup(row_width = 2)
-	breaking = types.InlineKeyboardButton("Пробив", callback_data = "breaking")
-	ban = types.InlineKeyboardButton("Бан", callback_data = "ban")
-	unban = types.InlineKeyboardButton("Разбан", callback_data = "unban")
-	payment = types.InlineKeyboardButton(f"Оплата {sensor}", callback_data = "payment")
-	order_feed = types.InlineKeyboardButton(f"Лента заказов {sensor2}", callback_data = "order_feed")
-	consol.add(breaking, ban, unban, payment, order_feed)
+	breaking = types.InlineKeyboardButton("Пробить", callback_data = "breaking")
+	ban = types.InlineKeyboardButton("Забанить", callback_data = "ban")
+	unban = types.InlineKeyboardButton("Разбанить", callback_data = "unban")
+	payment = types.InlineKeyboardButton(f"Вывод {sensor}", callback_data = "payment")
+	report = types.InlineKeyboardButton(f"Сообщить", callback_data = "report")
+	list_of_announcements = types.InlineKeyboardButton(f"Список объявлений", callback_data = "list_of_announcements")
+	ads = types.InlineKeyboardButton(f"Объявления {sensor3}", callback_data = "ads")
+	ribbons = types.InlineKeyboardButton(f"Ленты {sensor2}", callback_data = "ribbons")
+	replenishment = types.InlineKeyboardButton(f"Пополнение {sensor4}", callback_data = "replenishment")
+	withdrawal_history = types.InlineKeyboardButton(f"История вывода", callback_data = "withdrawal_history")
+
+	consol.add(unban, ban)
+	consol.add(report, breaking)
+	consol.add(list_of_announcements)
+	consol.add(ads, ribbons)
+	consol.add(payment, replenishment)
+	consol.add(withdrawal_history)
+
 
 	return consol, sensor, sensor2
 
@@ -73,20 +85,28 @@ def admin_canc():
 
 def adminModeration():
 	moder = types.InlineKeyboardMarkup(row_width = 1)
-	announcement_requests = types.InlineKeyboardButton("Заявки объявлений", callback_data = "announcement_requests")
-	profile_claims = types.InlineKeyboardButton("Заявки профиля", callback_data = "profile_claims")
-	complaints_applications = types.InlineKeyboardButton("Заявки жалоб", callback_data = "complaints_applications")
+	announcement_requests = types.InlineKeyboardButton("Просмотреть объявления", callback_data = "announcement_requests")
+	profile_claims = types.InlineKeyboardButton("Просмотреть профиля", callback_data = "profile_claims")
+	complaints_applications = types.InlineKeyboardButton("Просмотреть жалобы", callback_data = "aComplaints_applications")
 	moder.add(announcement_requests, profile_claims, complaints_applications)
 
 	return moder
 
+ 
+ 
 
 def bankProject():	
 	bank = types.InlineKeyboardMarkup(row_width = 2)
-	admin_output = types.InlineKeyboardButton("💸 Вывод", callback_data = "admin_output")
-	ref_limit = types.InlineKeyboardButton("🧮 Реф.Лимит", callback_data = "ref_limit")
-	list_of_reports = types.InlineKeyboardButton("📜 Список Отчетов", switch_inline_query_current_chat = "list_of_reports")
-	bank.add(admin_output, ref_limit, list_of_reports)
+	admin_output = types.InlineKeyboardButton("Вывести", callback_data = "admin_output")
+	refresh = types.InlineKeyboardButton("Обновить", callback_data = "refresh")
+	ic_stock = types.InlineKeyboardButton("[iC] Запас", callback_data = "ic_stock")
+	ic_one_time = types.InlineKeyboardButton("[iC] Разовой", callback_data = "ic_one_time")
+	list_of_expenses = types.InlineKeyboardButton("Список расходов", switch_inline_query_current_chat = "list_of_expenses")
+	list_of_reports = types.InlineKeyboardButton("Список отчетов", switch_inline_query_current_chat = "list_of_reports")
+	bank.add(admin_output, refresh)
+	bank.add(ic_stock, ic_one_time)
+	bank.add(list_of_expenses)
+	bank.add(list_of_reports)
 
 	return bank
 
@@ -137,3 +157,59 @@ def skipBtn():
 	skip_btn.add(skip)
 
 	return skip_btn
+
+
+def update():
+	btn_update = types.InlineKeyboardMarkup(row_width = 2)
+	update = types.InlineKeyboardButton(text = "Обновить", callback_data = f'update')
+	btn_update.add(update)
+
+	return btn_update
+
+
+def adminPrice(total_1, total_2, total_3):
+	aPrices = types.InlineKeyboardMarkup()
+	aPrice_1 = types.InlineKeyboardButton(text = '1️⃣', callback_data = f'aPrice {total_1}')
+	aPrice_2 = types.InlineKeyboardButton(text = '2️⃣', callback_data = f'aPrice {total_2}')
+	aPrice_3 = types.InlineKeyboardButton(text = '3️⃣', callback_data = f'aPrice {total_3}')
+	aPrices.add(aPrice_1, aPrice_2, aPrice_3)
+
+	return aPrices
+
+
+def icOneSets():
+	ic_set = types.InlineKeyboardMarkup(row_width = 2)
+	aPublish = types.InlineKeyboardButton(text = "Опубликовать", callback_data = f'aPublish')
+	aCancel = types.InlineKeyboardButton(text = "Отменить", callback_data = f'aCancel')
+	ic_set.add(aPublish, aCancel)
+
+	return ic_set
+
+
+def showReviewComplaintsBtns(ex_id, cus_id, order_id):
+	sucb = types.InlineKeyboardMarkup(row_width = 2)
+	cDelete = types.InlineKeyboardButton(text = "Удалить", callback_data = f'cDelete {ex_id},{cus_id},{order_id}')
+	cReject = types.InlineKeyboardButton(text = "Отклонить", callback_data = f'cReject {ex_id},{cus_id},{order_id}')
+	cEdit = types.InlineKeyboardButton(text = "Редактировать", callback_data = f'cEdit {ex_id},{cus_id},{order_id}')
+	sucb.add(cDelete, cReject, cEdit)
+
+	return sucb
+
+
+def causeDelete():
+	cd = types.InlineKeyboardMarkup(row_width = 2)
+	cConfirm = types.InlineKeyboardButton(text = "Подтвердить", callback_data = f'cConfirm')
+	cChange = types.InlineKeyboardButton(text = "Изменить", callback_data = f'cChange')
+	cd.add(cConfirm, cChange)
+
+	return cd
+
+
+def showUserComplaintsBtns(ex_id, cus_id, order_id):
+	sucb = types.InlineKeyboardMarkup(row_width = 2)
+	cDelete = types.InlineKeyboardButton(text = "Удалить", callback_data = f' {ex_id}')
+	cReject = types.InlineKeyboardButton(text = "Отклонить", callback_data = f' {ex_id}')
+	cEdit = types.InlineKeyboardButton(text = "Редактировать", callback_data = f' {ex_id}')
+	sucb.add(cDelete, cReject, cEdit)
+
+	return sucb

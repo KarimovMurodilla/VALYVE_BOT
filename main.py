@@ -18,18 +18,18 @@ from app.handlers.complete import register_complete_handlers
 from app.handlers.complete_order import register_complete_order_handlers
 from app.handlers.executor_completed import register_executor_completed_handlers
 from app.handlers.bot_payment import register_bot_payment_handlers
-
+from app.handlers.review_settings import register_review_handlers
+from app.handlers.order_settings import register_order_handlers
 
 from app.admin.admin_panel import register_admin_handlers
 from app.admin.admin_commands import register_handlers_admin_commands
 from app.admin.admin_consol import register_admin_consol_handlers
 from app.admin.admin_moderation import register_admin_moderation_handlers
 from app.admin.admin_querys import register_admin_inline_mode_handlers
+from app.admin.bank_control import register_bank_controls
+
 
 from app.filters.filter import register_filter_handlers
-
-# from app.handlers.bank_project import register_bank_handlers
-
 
 
 
@@ -58,17 +58,18 @@ async def main():
 	register_complete_order_handlers(dp)
 	register_executor_completed_handlers(dp)
 	register_bot_payment_handlers(dp)
+	register_review_handlers(dp)
+	register_order_handlers(dp)
 	
 	register_admin_handlers(dp)
 	register_handlers_admin_commands(dp)
 	register_admin_consol_handlers(dp)
 	register_admin_moderation_handlers(dp)
 	register_admin_inline_mode_handlers(dp)
+	register_bank_controls(dp)
 	
 	register_filter_handlers(dp)
 
-	# register_bank_handlers()
-	
 
 	await set_commands(bot)
 

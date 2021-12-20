@@ -345,7 +345,7 @@ async def callback_payment(c: types.CallbackQuery, state: FSMContext):
 		await bot.edit_message_reply_markup(
 			chat_id = c.from_user.id, 
 			message_id = c.message.message_id,
-			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2= admin_connection.selectFromAdminTable()[0][1])[0])
+			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
 		await bot.answer_callback_query(c.id, show_alert = False, text = "Оплата отключено ✖️")
 
 
@@ -354,7 +354,7 @@ async def callback_payment(c: types.CallbackQuery, state: FSMContext):
 		await bot.edit_message_reply_markup(
 			chat_id = c.from_user.id, 
 			message_id = c.message.message_id,
-			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2= admin_connection.selectFromAdminTable()[0][1])[0])
+			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
 		await bot.answer_callback_query(c.id, show_alert = False, text = "Оплата включено ✅")		
 
 
@@ -364,7 +364,7 @@ async def callback_order_feed(c: types.CallbackQuery, state: FSMContext):
 		await bot.edit_message_reply_markup(
 			chat_id = c.from_user.id, 
 			message_id = c.message.message_id,
-			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2= admin_connection.selectFromAdminTable()[0][1])[0])
+			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
 		await bot.answer_callback_query(c.id, show_alert = False, text = "Лента заказов отключено ✖️")
 
 
@@ -373,9 +373,45 @@ async def callback_order_feed(c: types.CallbackQuery, state: FSMContext):
 		await bot.edit_message_reply_markup(
 			chat_id = c.from_user.id, 
 			message_id = c.message.message_id,
-			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2= admin_connection.selectFromAdminTable()[0][1])[0])
+			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
 		await bot.answer_callback_query(c.id, show_alert = False, text = "Лента заказов включено ✅")
 
+
+async def callback_replenishment(c: types.CallbackQuery, state: FSMContext):
+	if admin_connection.selectFromAdminTable()[3][1] == '✅':
+		admin_connection.changeAdminTable('✖️', 'REPLENISHMENT')
+		await bot.edit_message_reply_markup(
+			chat_id = c.from_user.id, 
+			message_id = c.message.message_id,
+			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
+		await bot.answer_callback_query(c.id, show_alert = False, text = "Пополнение отключено ✖️")
+
+
+	elif admin_connection.selectFromAdminTable()[3][1] == '✖️':
+		admin_connection.changeAdminTable('✅', 'REPLENISHMENT')
+		await bot.edit_message_reply_markup(
+			chat_id = c.from_user.id, 
+			message_id = c.message.message_id,
+			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
+		await bot.answer_callback_query(c.id, show_alert = False, text = "Пополнение включено ✅")		
+
+async def callback_ads(c: types.CallbackQuery, state: FSMContext):
+	if admin_connection.selectFromAdminTable()[2][1] == '✅':
+		admin_connection.changeAdminTable('✖️', 'ADS')
+		await bot.edit_message_reply_markup(
+			chat_id = c.from_user.id, 
+			message_id = c.message.message_id,
+			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
+		await bot.answer_callback_query(c.id, show_alert = False, text = "Объявление отключено ✖️")
+
+
+	elif admin_connection.selectFromAdminTable()[2][1] == '✖️':
+		admin_connection.changeAdminTable('✅', 'ADS')
+		await bot.edit_message_reply_markup(
+			chat_id = c.from_user.id, 
+			message_id = c.message.message_id,
+			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
+		await bot.answer_callback_query(c.id, show_alert = False, text = "Объявление включено ✅")		
 
 
 def register_admin_consol_handlers(dp: Dispatcher):
@@ -411,4 +447,7 @@ def register_admin_consol_handlers(dp: Dispatcher):
 	dp.register_message_handler(process_unban, state = ProcessSetStatus.step2)
 
 	dp.register_callback_query_handler(callback_payment, lambda c: c.data == 'payment',  state = '*')
-	dp.register_callback_query_handler(callback_order_feed, lambda c: c.data == 'order_feed',  state = '*')
+	dp.register_callback_query_handler(callback_order_feed, lambda c: c.data == 'ribbons',  state = '*')
+
+	dp.register_callback_query_handler(callback_replenishment, lambda c: c.data == 'replenishment',  state = '*')
+	dp.register_callback_query_handler(callback_ads, lambda c: c.data == 'ads',  state = '*')

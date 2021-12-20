@@ -8,110 +8,6 @@ with sql.connect(config.DB_PATH, check_same_thread=False) as con:
 	cur = con.cursor()
 
 
-# ---For Users---
-def createUserStatus():
-	cur.execute("""CREATE TABLE IF NOT EXISTS users(
-				user_id INT,
-				user_name TEXT,
-				user_username TEXT,
-				user_status TEXT,
-				user_referral INT DEFAULT 0,
-				active_referrals INT DEFAULT 0,
-				user_balance BOOLEAN DEFAULT 0,
-				user_coupon INT DEFAULT 0,
-				from_id INT,
-				pagination INT,
-				date_start timestamp
-				)""")
-	con.commit()
-
-
-# ---Customers---
-def createCusTable():
-	cur.execute("""CREATE TABLE IF NOT EXISTS customers(
-				cus_id INT,
-				cus_name TEXT,
-				cus_pic TEXT,
-				cus_contact INT,
-				date_registration TIMESTAMP,
-				cus_status TEXT)""")
-	con.commit()
-
-
-#-----For Orders-----
-def createTableOrders():
-	cur.execute("""CREATE TABLE IF NOT EXISTS orders(
-				cus_id INT,
-				cus_name TEXT,
-				cus_adress TEXT,
-				cus_work_graphic TEXT,
-				cus_work_day TEXT,
-				cus_bid TEXT,
-				cus_position TEXT,
-				cus_comment TEXT,
-				cus_lat INT,
-				cus_long INT, 
-				date_order TIMESTAMP,
-				order_status TEXT,
-				order_id INT, 
-				deletion_date TIMESTAMP,
-				requirements TEXT,
-				respons TEXT
-				)""")
-	con.commit()
-
-
-# ---For Executors---
-def createExecutorTable():
-	cur.execute("""CREATE TABLE IF NOT EXISTS executors(
-				ex_id INT,
-				ex_name TEXT,
-				date_of_birth TEXT,
-				ex_pic TEXT,
-				ex_contact INT,
-				ex_skill TEXT,
-				ex_rate INT,
-				date_registration TIMESTAMP,
-				ex_status TEXT
-				)""")
-	con.commit()
-
-
-# ---For Responses---
-def createResponsesTable():
-	cur.execute("""CREATE TABLE IF NOT EXISTS responses(
-				cus_id INT,
-				order_id TEXT,
-				requests INT,
-				my_performers INT
-				)""")
-	con.commit()
-
-
-
-# ---For Rating---
-def createRatingTable():
-	cur.execute("""CREATE TABLE IF NOT EXISTS ratings(
-				ex_id INT,
-				review TEXT,
-				cus_id INT,
-				order_id INT,
-				date_of_completion TIMESTAMP
-				)""")
-	con.commit()
-
-
-def createPaymentTable():
-	cur.execute("""CREATE TABLE IF NOT EXISTS payments(
-				user_id INT,
-				title TEXT,
-				user_payment INT DEFAULT 0,
-				bot_payment INT DEFAULT 0,
-				date_of_payment TIMESTAMP
-				)""")
-	con.commit()
-
-
 
 def checkReferral(user_id: str):
 	user_ref = cur.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
@@ -141,6 +37,7 @@ def setActiveUser(user_id: str):
 def getRefActives(from_id: str):
 	ref_actives = cur.execute("SELECT user_id FROM users WHERE from_id = ?", (from_id,)).fetchall()
 	return ref_actives
+
 
 # -------All bot users------
 def checkUserStatus(user_id: str):
@@ -178,10 +75,14 @@ def backPagination(user_id: str):
 	con.commit()
 
 
-def addBalance(user_id: str, user_balance: int):
-	cur.execute(f"UPDATE users SET user_balance = user_balance+\'{user_balance}\' WHERE user_id = ?", (user_id,))
-	con.commit()
+def updateBalance(user_id: str, user_balance: int, status: str):
+	if status == '+':
+		cur.execute(f"UPDATE users SET user_balance = user_balance+\'{user_balance}\' WHERE user_id = ?", (user_id,))
+		con.commit()
 
+	else:
+		cur.execute(f"UPDATE users SET user_balance = user_balance-\'{user_balance}\' WHERE user_id = ?", (user_id,))
+		con.commit()
 
 
 
@@ -223,8 +124,12 @@ def checkNewOrder(cus_id: str):
 	return checkOrder
 
 
-def createNewOrder(cus_id: str, cus_name: str, cus_adress: str, cus_work_graphic: str, cus_work_day: str, cus_bid: str, cus_position: str, cus_comment: str, cus_lat: str, cus_long: str, date_order: str, order_status: str, order_id: int, deletion_date: str, requirements: str, respons: str):
-	cur.execute("INSERT INTO orders (cus_id, cus_name, cus_adress, cus_work_graphic, cus_work_day, cus_bid, cus_position, cus_comment, cus_lat, cus_long, date_order, order_status, order_id, deletion_date, requirements, respons)VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (cus_id, cus_name, cus_adress, cus_work_graphic, cus_work_day, cus_bid, cus_position, cus_comment, cus_lat, cus_long, date_order, order_status, order_id, deletion_date, requirements, respons,))
+def createNewOrder(cus_id: str, cus_name: str, cus_adress: str, cus_work_graphic: str, cus_work_day: str, cus_bid: str, cus_position: str, cus_comment: str, cus_lat: str, cus_long: str, date_order: str, order_status: str, order_id: int, deletion_date: str, requirements: str, respons: str, payment_for_waiting: str):
+	cur.execute("""INSERT INTO orders (cus_id, cus_name, cus_adress, cus_work_graphic, cus_work_day, cus_bid, cus_position, 
+									   cus_comment, cus_lat, cus_long, date_order, order_status, order_id, deletion_date, requirements, respons, payment_for_waiting)
+					VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (cus_id, cus_name, cus_adress, cus_work_graphic, 
+						cus_work_day, cus_bid, cus_position, cus_comment, cus_lat, cus_long, date_order, order_status, 
+						order_id, deletion_date, requirements, respons, payment_for_waiting,))
 	con.commit()
 
 
@@ -262,6 +167,11 @@ def UpdateOrder(cus_id: str, order_id: str, cus_name: str, cus_adress: str, cus_
 
 def UpdateOrderStatus(cus_id: str, order_id: int, order_status: str, deletion_date = None):
 	cur.execute("UPDATE orders SET order_status = ?, deletion_date = ? WHERE cus_id = ? AND order_id = ?", (order_status, deletion_date, cus_id, order_id,))
+	con.commit()
+
+
+def orderMiniUpdate(cus_id, order_id, comment, date_order, deletion_date, payment_for_waiting):
+	cur.execute("UPDATE orders SET cus_comment = ?, date_order = ?, deletion_date = ?, order_status = 'Пересмотр', payment_for_waiting = ? WHERE cus_id = ? AND order_id = ?", (comment, date_order, deletion_date, payment_for_waiting, cus_id, order_id,))
 	con.commit()
 
 
@@ -334,7 +244,7 @@ def selectRequestsWhereOrderId(cus_id: int, order_id: int):
 
 
 def selectMyPerWhereOrderId(cus_id: int, order_id: int):
-	my_perfs = cur.execute("SELECT my_performers FROM responses WHERE cus_id = ? AND order_id = ?", (cus_id, order_id,)).fetchall()
+	my_perfs = cur.execute("SELECT my_performers FROM responses WHERE cus_id = ? AND order_id = ?", (cus_id, order_id,)).fetchone()
 	return my_perfs
 
 
@@ -367,18 +277,41 @@ def removeAll(cus_id: int, order_id: int):
 	cur.execute("DELETE FROM responses WHERE cus_id = ? AND order_id = ?", (cus_id, order_id,))
 	con.commit()
 
+
 #-----RATING-----
 def regExToRatings(ex_id: str, cus_id: int, order_id: int):
 	cur.execute("INSERT INTO ratings (ex_id, cus_id, order_id)VALUES(?,?,?)", (ex_id, cus_id, order_id,))
 	con.commit()
 
+
 def UpdateRating(ex_id: str, review: str, cus_id: str, order_id: str, date_of_completion: str):
 	cur.execute("UPDATE ratings SET review = ?, date_of_completion = ? WHERE ex_id = ? AND cus_id = ? AND order_id = ?", (review, date_of_completion, ex_id, cus_id, order_id,))
 	con.commit()
 
+
+def UpdateAnswer(ex_id: str, cus_id: str, order_id: str, answer: str):
+	cur.execute("UPDATE ratings SET answer = ? WHERE ex_id = ? AND cus_id = ? AND order_id = ?", (answer, ex_id, cus_id, order_id,))
+	con.commit()
+
+
 def selectReviews(ex_id: str):
 	reviews = cur.execute("SELECT * FROM ratings WHERE ex_id = ?", (ex_id,)).fetchall()
 	return reviews
+
+
+def selectReview(ex_id: str, cus_id: str, order_id: str):
+	review = cur.execute("SELECT * FROM ratings WHERE ex_id = ? AND cus_id = ? AND order_id = ?", (ex_id, cus_id, order_id,)).fetchone()
+	return review
+
+
+def deleteRating(ex_id, cus_id, order_id):
+	cur.execute("DELETE FROM ratings WHERE ex_id = ? AND cus_id = ? AND order_id = ?", (ex_id, cus_id, order_id,))
+	con.commit()
+
+
+def UpdateReview(ex_id: str, cus_id: str, order_id: str, review: str):
+	cur.execute("UPDATE ratings SET review = ? WHERE ex_id = ? AND cus_id = ? AND order_id = ?", (review, ex_id, cus_id, order_id,))
+	con.commit()
 
 
 #-----PAYMENTS-----
@@ -390,33 +323,3 @@ def addPayment(user_id: str, title: str, user_payment: int, date_of_payment: str
 def addBotPayment(user_id: str, title: str, bot_payment: int, date_of_payment: str):
 	cur.execute("INSERT INTO payments (user_id, title, bot_payment, date_of_payment)VALUES(?,?,?,?)", (user_id, title, bot_payment, date_of_payment,))
 	con.commit()
-
-
-
-createUserStatus()
-createCusTable()
-createTableOrders()
-createExecutorTable()
-createResponsesTable()
-createRatingTable()
-createPaymentTable()
-
-
-# cus_id = 1433345744
-# order_id = 0
-
-# if 875587704 not in selectRequests(order_id, cus_id) and selectRequests(order_id, cus_id)[0] is None or selectRequests(order_id, cus_id)[0] == '':
-# 	if selectMyPerInOrderId(cus_id, order_id)[0] is None or selectMyPerInOrderId(cus_id, order_id)[0] == '':
-# 		print("BOsh")
-# 	else:
-# 		print("BOsh emas")
-
-# print(selectMyPerInOrderId(cus_id, order_id)[0])
-
-# from admin import admin_connection
-
-# user_id = 875587704
-# status = 'executor'
-# profil = admin_connection.selectUserFromRequestProfils(user_id, status)
-# # print(profil)
-# print(profil[0][2], profil[0][5], profil[0][3], profil[0][4], profil[0][6])

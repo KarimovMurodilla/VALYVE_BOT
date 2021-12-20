@@ -81,6 +81,7 @@ async def my_performers(query: types.InlineQuery):
 
 
 async def query_reviews(query: types.InlineQuery):
+	user_id = query.from_user.id
 	ex_id = query.query[8:]
 	item = connection.selectReviews(ex_id)
 
@@ -94,8 +95,10 @@ async def query_reviews(query: types.InlineQuery):
 
 							f"<a href='https://t.me/ValyveExchange_bot?start={item[n][2]}_{item[n][3]}'>Просмотреть заказ</a>\n\n"
 
-							f"<b>Отзыв:</b>\n<code>{item[n][1]}</code>", disable_web_page_preview = True),
-								reply_markup = None)
+							f"<b>Отзыв:</b>\n<code>{item[n][1]}</code>\n\n"
+
+							f"{item[n][5]}", disable_web_page_preview = True),
+								reply_markup = buttons.answerToReview(ex_id, item[n][2], item[n][3], int(user_id) == int(ex_id)))
 									for n in range(len(item)) if item[n][1] is not None and not item[n][1] == '']
 
 		await query.answer(my_performers, cache_time=60, is_personal=True)
@@ -152,4 +155,4 @@ def register_inline_mode_handlers(dp: Dispatcher):
 
 	dp.register_inline_handler(recent_works, lambda query: query.query.startswith("!recent_works"), state = '*')
 
-	dp.register_message_handler(get_msg_id, lambda message: message.text.startswith("Вы хотите просмотреть профиль?"), state = '*')
+	dp.register_message_handler(get_msg_id, lambda message: message.text.startswith("Вы хотите просмотреть профиль"), state = '*')

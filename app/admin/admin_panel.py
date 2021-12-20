@@ -21,64 +21,91 @@ async def get_stat(message: types.Message, state: FSMContext):
 												    f"<b>└ За месяц:</b> <code>0 шт.\n\n</code>"
 
 										  			f"<b>[S] Объявлений:</b> <code>{all_orders} шт.</code>\n"
-										  			f"<b>└ За неделю:</b> <code>{orders_during_the_week} шт.</code>")
+										  			f"<b>└ За неделю:</b> <code>{orders_during_the_week} шт.</code>", 
+										  				reply_markup = admin_buttons.update())
 
 
 async def show_bank(message: types.Message, state: FSMContext):
-	await bot.send_message(message.chat.id, f"<b>Выручка за месяц</b>\n"
-											f"└ <code>0.0руб.</code>\n"
-											f"  <b>За неделю</b>\n"
-											"  └ <code>0.0 руб.</code>\n\n"
+	await bot.send_photo(message.chat.id, photo = file_ids.PHOTO['bank'],
+											  caption = "<b>Доход за месяц</b>\n"
+														"└ <code>0.0</code> ₽\n"
+														" <b>За неделю</b>\n"
+														" └ <code>0.0</code> ₽\n\n"
 
-											f"<b>Сотрудник в запасе</b>\n"
-											f"<b>Выплата за месяц</b>\n"
-											f"└ <code>0.0 руб.</code>\n"
-											f"  <b>За неделю</b>\n"
-											f"  └ <code>0.0 руб.</code>\n\n"
+														"<b>Расходы за месяц</b>\n"
+														"└ <code>0.0</code> ₽\n"
+														"<b>За неделю</b>\n"
+														"└ <code>0.0</code> ₽\n\n"
 
-											f"<b>Реферальная система</b>\n"
-											f"<b>Выплата за месяц</b>\n"
-											f"└ <code>0.0 руб.</code>\n"
-											f"   <b>За неделю</b>\n"
-											f"   └ <code>0.0 руб.</code>\n\n"
+														"<b>Прибыль за месяц</b>\n"
+														"└ <code>0.0</code> ₽\n"
+														" <b>За неделю</b>\n"														" └ <code>0.0</code> ₽\n\n"
 
-											f"<b>Купоны VALYVE</b>\n"
-											f"<b>Выплата за месяц</b>\n"
-											f"└  <code>0.0 руб.</code>\n"
-											f"  <b>За неделю</b>\n"
-											f"  └ <code>0.0 руб.</code>\n\n"
+														"<b>Банк проекта:</b> <code>0.0</code> ₽",
+															reply_markup = admin_buttons.bankProject())
+	
+	# await bot.send_message(message.chat.id, f"<b>Выручка за месяц</b>\n"
+	# 										f"└ <code>0.0руб.</code>\n"
+	# 										f"  <b>За неделю</b>\n"
+	# 										"  └ <code>0.0 руб.</code>\n\n"
 
-											f"<b>Выплаты сотрудникам</b>\n"
-											f"<b>Выплата за месяц</b>\n"
-											f"└ <code>0.0 руб.</code>\n"
-											f"  <b>За неделю</b>\n"
-											f"  └ <code>0.0 руб.</code>\n\n"
+	# 										f"<b>Сотрудник в запасе</b>\n"
+	# 										f"<b>Выплата за месяц</b>\n"
+	# 										f"└ <code>0.0 руб.</code>\n"
+	# 										f"  <b>За неделю</b>\n"
+	# 										f"  └ <code>0.0 руб.</code>\n\n"
 
-											f"<b>Прибыль за месяц</b>\n"
-											f"└ <code>0.0 руб.</code>\n"
-											f"  <b>За неделю</b>\n"
-											f"  └ <code>0.0 руб.</code>\n\n"
+	# 										f"<b>Реферальная система</b>\n"
+	# 										f"<b>Выплата за месяц</b>\n"
+	# 										f"└ <code>0.0 руб.</code>\n"
+	# 										f"   <b>За неделю</b>\n"
+	# 										f"   └ <code>0.0 руб.</code>\n\n"
 
-											f"<b>Баланс проекта:</b> <code>0.0 руб.</code>\n"
-											f"<b>В заморозке:</b> <code>0.0 руб.</code>",
-											reply_markup = admin_buttons.bankProject())
+	# 										f"<b>Купоны VALYVE</b>\n"
+	# 										f"<b>Выплата за месяц</b>\n"
+	# 										f"└  <code>0.0 руб.</code>\n"
+	# 										f"  <b>За неделю</b>\n"
+	# 										f"  └ <code>0.0 руб.</code>\n\n"
+
+	# 										f"<b>Выплаты сотрудникам</b>\n"
+	# 										f"<b>Выплата за месяц</b>\n"
+	# 										f"└ <code>0.0 руб.</code>\n"
+	# 										f"  <b>За неделю</b>\n"
+	# 										f"  └ <code>0.0 руб.</code>\n\n"
+
+	# 										f"<b>Прибыль за месяц</b>\n"
+	# 										f"└ <code>0.0 руб.</code>\n"
+	# 										f"  <b>За неделю</b>\n"
+	# 										f"  └ <code>0.0 руб.</code>\n\n"
+
+	# 										f"<b>Баланс проекта:</b> <code>0.0 руб.</code>\n"
+	# 										f"<b>В заморозке:</b> <code>0.0 руб.</code>",
+	# 										reply_markup = admin_buttons.bankProject())
 
 
 async def get_consol(message: types.Message, state: FSMContext):
-	await bot.send_message(message.chat.id, "<b>Админ консоль:</b>", 
-		reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2= admin_connection.selectFromAdminTable()[0][1])[0])
+	await bot.send_photo(message.chat.id, 
+			photo = file_ids.PHOTO['stat'],
+				reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
 
 
 
 async def theModer(message: types.Message, state: FSMContext):
-	await bot.send_message(message.chat.id, "Модерация:",
+	await bot.send_photo(message.chat.id,  
+		photo = file_ids.PHOTO['stat'],
+		caption =   "За сегодня просмотрено\n" 
+					"    Объявлений: <code>0 шт</code>\n\n"
+					"За сегодня просмотрено\n"
+					"    Профилей: <code>0 шт</code>\n\n"
+					"За сегодня просмотрено\n"
+					"    Жалоб: <code>0 шт</code>",
 		reply_markup = admin_buttons.adminModeration())
 
 
 
 
 def register_admin_handlers(dp: Dispatcher):
-	dp.register_message_handler(get_stat, chat_id = config.ADMINS, text = "📊 Статистика", state = '*')
-	dp.register_message_handler(show_bank, chat_id = config.ADMINS, text = "🏦 Банк", state = '*')
-	dp.register_message_handler(get_consol, chat_id = config.ADMINS, text = "🎛 Консоль", state = '*')
-	dp.register_message_handler(theModer, chat_id = config.ADMINS, text = "👨🏻‍💻 Модерация", state = '*')
+	dp.register_message_handler(get_stat, chat_id = config.ADMINS, text = "Статистика", state = '*')
+	dp.register_message_handler(show_bank, chat_id = config.ADMINS, text = "Банк", state = '*')
+	dp.register_message_handler(get_consol, chat_id = config.ADMINS, text = "Консоль", state = '*')
+	dp.register_message_handler(theModer, chat_id = config.ADMINS, text = "Модерация", state = '*')

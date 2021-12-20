@@ -1,4 +1,4 @@
-import time
+import datetime
 
 from app.handlers.reg_executor_profil import RegExecutor
 from aiogram import Bot, Dispatcher, types
@@ -253,32 +253,36 @@ async def callback_approve(c: types.CallbackQuery, state: FSMContext):
 	orderId = int(ids[1])
 	contact = int(ids[2])
 	item = connection.selectOrders(cus_id)
-	
-	if ex_id not in connection.selectMyPerInOrderId(cus_id, orderId):
-		if connection.checkExecutor(ex_id)[8] == 'busy':
-			await bot.answer_callback_query(c.id, show_alert = True, text = "⚠️ Исполнитель уже взялася за другой заказ, выберите другого исполнителя.")
 
-		elif ex_id not in connection.selectRequests(orderId, cus_id):
-			await bot.answer_callback_query(c.id, show_alert = True, text = "⚠️ Ошибка:\n\n"
-																			"Вы уже отклонили этого исполнителя!")
+	if not connection.selectMyPerInOrderId(cus_id, orderId):
+		if ex_id not in connection.selectMyPerInOrderId(cus_id, orderId):
+			if connection.checkExecutor(ex_id)[8] == 'busy':
+				await bot.answer_callback_query(c.id, show_alert = True, text = "⚠️ Исполнитель уже взялася за другой заказ, выберите другого исполнителя.")
+
+			elif ex_id not in connection.selectRequests(orderId, cus_id):
+				await bot.answer_callback_query(c.id, show_alert = True, text = "⚠️ Ошибка:\n\n"
+																				"Вы уже отклонили этого исполнителя!")
+			else:
+				await bot.answer_callback_query(c.id, show_alert = True, text = "🔔 Уведомление:\n\n" 
+																				"Исполнитель добавлен в список \"Мои исполнители\". Чтоб взаимодействовать с ним, зайдите в этот раздел.")
+				connection.replaceReqToPer(cus_id, ex_id, orderId)	
+
+				await bot.send_message(ex_id, "<b>🔔 Уведомление:</b>\n\n"
+											  f"Заказчик <code>{connection.selectAll(cus_id)[0]}</code>, "
+											  "одобрил вашу заявку на вакансию",
+											  	reply_markup = buttons.viewVacancy(cus_id, orderId))	
+
+				connection.UpdateExStatus(ex_id, 'busy')
+				connection.regExToRatings(ex_id, cus_id, orderId)
+
+		
 		else:
-			await bot.answer_callback_query(c.id, show_alert = True, text = "🔔 Уведомление:\n\n" 
-																			"Исполнитель добавлен в список \"Мои исполнители\". Чтоб взаимодействовать с ним, зайдите в этот раздел.")
-			connection.replaceReqToPer(cus_id, ex_id, orderId)	
-
-			await bot.send_message(ex_id, "<b>🔔 Уведомление:</b>\n\n"
-										  f"Заказчик <code>{connection.selectAll(cus_id)[0]}</code>, "
-										  "одобрил вашу заявку на вакансию",
-										  	reply_markup = buttons.viewVacancy(cus_id, orderId))	
-
-			connection.UpdateExStatus(ex_id, 'busy')
-			connection.regExToRatings(ex_id, cus_id, orderId)
-
-	
-	else:
-		await bot.answer_callback_query(c.id, show_alert = True, text = "⚠️ Ошибка:\n\n"
+			await bot.answer_callback_query(c.id, show_alert = True, text = "⚠️ Ошибка:\n\n"
 																		"Вы уже одобрили этого исполнителя!")
 
+	else:
+		await bot.answer_callback_query(c.id, show_alert = True, text = "⚠️ Ошибка:\n\n"
+																		"У вас уже имеется исполнитель!")		
 
 
 
@@ -290,7 +294,7 @@ async def callback_refusal(c: types.CallbackQuery, state: FSMContext):
 	orderId = int(ids[1])
 	contact = int(ids[2])
 	item = connection.selectOrders(cus_id)
-
+ 
 	if ex_id == connection.selectRequestsWhereOrderId(cus_id, orderId)[0][0]:
 		await bot.answer_callback_query(c.id, show_alert = True, text = "🔔 Уведомление:\n\n"
 																		"Заявка была успешно отклонена!")
@@ -330,6 +334,7 @@ async def callback_view(c: types.CallbackQuery, state: FSMContext):
 		order_id = ids[1]
 		all_data = connection.checkExecutor(ex_id)
 		contact = connection.selectAll(cus_id)[2]
+		now = datetime.datetime.now().strftime('%Y')		
 
 	if int(ex_id) in connection.selectMyPerInOrderId(int(cus_id), int(order_id)):
 		try:
@@ -346,20 +351,17 @@ async def callback_view(c: types.CallbackQuery, state: FSMContext):
 																		f"<b>Навыки:</b>\n{all_data[5]}\n\n"
 																		f"<b>  Рейтинг:</b> <code>{all_data[6]}</code>",
 																	reply_markup = buttons.performerButtons(ex_id, order_id))
+	
 	elif int(ex_id) in connection.selectRequests(int(order_id), int(cus_id)):
 		try:
-			await bot.send_photo(c.from_user.id, photo = all_data[3], caption = f"<b>{all_data[1]}</b>\n\n"
-																				f"<b>  Дата рождения:</b> <code>{all_data[2]}</code>\n"
-																				f"<b>  Номер:</b> <code>+{all_data[4]}</code>\n\n"
-																				f"<b>Навыки:</b>\n{all_data[5]}\n\n"
-																				f"<b>  Рейтинг:</b> <code>{all_data[6]}</code>",
+			await bot.send_photo(c.from_user.id, photo = all_data[3], caption = f"<b>{all_data[1]}</b>, <code>{int(now)-int(all_data[2][6:])}</code> лет\n\n"
+																				f"<b>  Рейтинг:</b> <code>{all_data[6]}</code>\n\n"
+																				f"<b>Навыки:</b>\n{all_data[5]}",
 																			reply_markup = buttons.requestButton(ex_id, order_id, contact))
 		except Exception:
-			await bot.send_video(c.from_user.id, all_data[3], caption = f"<b>{all_data[1]}</b>\n\n"
-																		f"<b>  Дата рождения:</b> <code>{all_data[2]}</code>\n"
-																		f"<b>  Номер:</b> <code>+{all_data[4]}</code>\n\n"
-																		f"<b>Навыки:</b>\n{all_data[5]}\n\n"
-																		f"<b>  Рейтинг:</b> <code>{all_data[6]}</code>",
+			await bot.send_video(c.from_user.id, all_data[3], caption = f"<b>{all_data[1]}</b>, <code>{int(now)-int(all_data[2][6:])}</code> лет\n\n"
+																		f"<b>  Рейтинг:</b> <code>{all_data[6]}</code>\n\n"
+																		f"<b>Навыки:</b>\n{all_data[5]}",
 																	reply_markup = buttons.requestButton(ex_id, order_id, contact))
 
 
@@ -405,13 +407,10 @@ async def callback_get_geo(c: types.CallbackQuery, state: FSMContext):
 
 
 
-
-
 def register_callback_handlers(dp: Dispatcher):
 	dp.register_callback_query_handler(callback_zak, lambda c: c.data == 'zak',  state = '*')    
 	dp.register_callback_query_handler(callback_isp, lambda c: c.data == 'isp',  state = '*')    
 	dp.register_callback_query_handler(callback_auth, lambda c: c.data == 'auth',  state = '*')
-	# dp.register_callback_query_handler(callback_bank, lambda c: c.data == 'bank',  state = '*')
 	# dp.register_callback_query_handler(callback_refresh, lambda c: c.data == 'refresh',  state = '*')
 	dp.register_callback_query_handler(callback_support, lambda c: c.data == 'support',  state = '*')
 
