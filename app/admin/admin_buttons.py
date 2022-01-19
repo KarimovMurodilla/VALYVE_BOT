@@ -62,7 +62,7 @@ def btnCustomer(cus_id):
 
 def btnExecutor(ex_id):
 	btns_ex = types.InlineKeyboardMarkup(row_width = 2)
-	edit_profil_ex = types.InlineKeyboardButton("Ред.профиль", callback_data = "edit_profil_ex")
+	edit_profil_ex = types.InlineKeyboardButton("Ред.профиль", callback_data = f"edit_profil_ex")
 	ban_ex = types.InlineKeyboardButton("Бан", callback_data = "ban_ex")
 	unban_ex = types.InlineKeyboardButton("Разбан", callback_data = "unban_ex")
 	work_history = types.InlineKeyboardButton("История работы", switch_inline_query_current_chat = f"!work_history {ex_id}")
@@ -187,13 +187,13 @@ def icOneSets():
 
 
 def showReviewComplaintsBtns(ex_id, cus_id, order_id):
-	sucb = types.InlineKeyboardMarkup(row_width = 2)
+	srcb = types.InlineKeyboardMarkup(row_width = 2)
 	cDelete = types.InlineKeyboardButton(text = "Удалить", callback_data = f'cDelete {ex_id},{cus_id},{order_id}')
 	cReject = types.InlineKeyboardButton(text = "Отклонить", callback_data = f'cReject {ex_id},{cus_id},{order_id}')
 	cEdit = types.InlineKeyboardButton(text = "Редактировать", callback_data = f'cEdit {ex_id},{cus_id},{order_id}')
-	sucb.add(cDelete, cReject, cEdit)
+	srcb.add(cDelete, cReject, cEdit)
 
-	return sucb
+	return srcb
 
 
 def causeDelete():
@@ -205,11 +205,11 @@ def causeDelete():
 	return cd
 
 
-def showUserComplaintsBtns(ex_id, cus_id, order_id):
+def showUserComplaintsBtns(ex_id, rowid):
 	sucb = types.InlineKeyboardMarkup(row_width = 2)
-	cDelete = types.InlineKeyboardButton(text = "Удалить", callback_data = f' {ex_id}')
-	cReject = types.InlineKeyboardButton(text = "Отклонить", callback_data = f' {ex_id}')
-	cEdit = types.InlineKeyboardButton(text = "Редактировать", callback_data = f' {ex_id}')
-	sucb.add(cDelete, cReject, cEdit)
+	cBan = types.InlineKeyboardButton(text = "Забанить", callback_data = f'cBan {ex_id}')
+	cReject = types.InlineKeyboardButton(text = "Отклонить", callback_data = f'cReject {ex_id},{rowid}')
+	cEdit = types.InlineKeyboardButton(text = "Редактировать", callback_data = f'edit_profil_ex {ex_id}')
+	sucb.add(cBan, cReject, cEdit)
 
 	return sucb

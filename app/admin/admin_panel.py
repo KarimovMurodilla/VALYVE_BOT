@@ -1,3 +1,5 @@
+import datetime
+
 from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from app.admin import admin_connection, admin_buttons
@@ -8,12 +10,12 @@ bot = Bot(token=config.TOKEN, parse_mode = 'html')
 
 async def get_stat(message: types.Message, state: FSMContext):
 	all_users = admin_connection.allUsers()
-	during_the_week = admin_connection.orderByWeek()
+	during_the_week = admin_connection.usersByWeek()
 
 	all_orders = admin_connection.allOrders()
 	orders_during_the_week = admin_connection.ordersByWeek()
 
-	await bot.send_photo(message.chat.id, photo = file_ids.PHOTO['stat'],
+	await bot.send_photo(message.chat.id, photo = file_ids.PHOTO_ADMIN['stat'],
 										  caption = f"<b>Пользователей:</b> <code>{all_users} ч.</code>\n"
 										  			f"<b>└ За неделю:</b> <code>{during_the_week} ч.</code>\n\n"
 
@@ -85,22 +87,29 @@ async def show_bank(message: types.Message, state: FSMContext):
 
 async def get_consol(message: types.Message, state: FSMContext):
 	await bot.send_photo(message.chat.id, 
-			photo = file_ids.PHOTO['stat'],
-				reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
+			photo = file_ids.PHOTO_ADMIN['console'],
+				reply_markup = admin_buttons.adminConsol(
+					sensor = admin_connection.selectFromAdminTable()[1][1],  
+						sensor2 = admin_connection.selectFromAdminTable()[0][1],  
+							sensor3= admin_connection.selectFromAdminTable()[2][1],  
+								sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
 
 
 
 async def theModer(message: types.Message, state: FSMContext):
-	await bot.send_photo(message.chat.id,  
-		photo = file_ids.PHOTO['stat'],
-		caption =   "За сегодня просмотрено\n" 
-					"    Объявлений: <code>0 шт</code>\n\n"
-					"За сегодня просмотрено\n"
-					"    Профилей: <code>0 шт</code>\n\n"
-					"За сегодня просмотрено\n"
-					"    Жалоб: <code>0 шт</code>",
-		reply_markup = admin_buttons.adminModeration())
+	ads = [a[0] for a in admin_connection.getViews('ads', datetime.datetime.today().strftime("%d.%m.%Y")) if a[0] != 0]
+	profils = [p[0] for p in admin_connection.getViews('profils', datetime.datetime.today().strftime("%d.%m.%Y")) if p[0] != 0]
+	complaints = [c[0] for c in admin_connection.getViews('complaints', datetime.datetime.today().strftime("%d.%m.%Y")) if c[0] != 0]
 
+	await bot.send_photo(message.chat.id,  
+		photo = file_ids.PHOTO_ADMIN['moderation'],
+		caption =   "За сегодня просмотрено\n" 
+					f"    Объявлений: <code>{len(ads)} шт</code>\n\n"
+					"За сегодня просмотрено\n"
+					f"    Профилей: <code>{len(profils)} шт</code>\n\n"
+					"За сегодня просмотрено\n"
+					f"    Жалоб: <code>{len(complaints)} шт</code>",
+		reply_markup = admin_buttons.adminModeration())	
 
 
 

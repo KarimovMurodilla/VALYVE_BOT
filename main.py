@@ -28,7 +28,6 @@ from app.admin.admin_moderation import register_admin_moderation_handlers
 from app.admin.admin_querys import register_admin_inline_mode_handlers
 from app.admin.bank_control import register_bank_controls
 
-
 from app.filters.filter import register_filter_handlers
 
 

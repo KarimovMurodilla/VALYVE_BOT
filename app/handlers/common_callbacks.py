@@ -199,10 +199,14 @@ async def callback_apply(c: types.CallbackQuery, state: FSMContext):
 			elif user_id in connection.selectRequests(order_id, cus_id) or user_id in connection.selectMyPerInOrderId(cus_id, order_id):
 				await bot.answer_callback_query(c.id, show_alert = True, text = "⚠️ Ошибка:\n\n"
 																				"Вы уже откликнулись на это объявление! Дождитесь ответа от заказчика.")
+			
 			else:		
 				connection.UpdateRequests(user_id, cus_id, order_id)
 				await bot.answer_callback_query(c.id, show_alert = True, text = "🔔 Уведомление:\n\n"
 																				"Ваша заявка отправлена! Ожидайте ответа от заказчика.")
+				await bot.send_message(cus_id, "🔔 Уведомление:\n\n"
+												"К вашему объявлению кто-то откликнулся.",
+													reply_markup = buttons.get_orders(cus_id, just_inline = True))
 
 		else:
 			if cus_id == user_id:
@@ -221,6 +225,9 @@ async def callback_apply(c: types.CallbackQuery, state: FSMContext):
 										readd[1],
 										user_id,
 										readd[3])
+				await bot.send_message(cus_id, "🔔 Уведомление:\n\n"
+												"К вашему объявлению кто-то откликнулся.",
+													reply_markup = buttons.get_orders(cus_id, just_inline = True))
 
 	else:
 		if cus_id == user_id:
@@ -244,7 +251,6 @@ async def callback_apply(c: types.CallbackQuery, state: FSMContext):
 		
 
 
-@fast_answer
 async def callback_approve(c: types.CallbackQuery, state: FSMContext):
 	cus_id = c.from_user.id
 	exAndOrderId = c.data[10:]
@@ -254,7 +260,7 @@ async def callback_approve(c: types.CallbackQuery, state: FSMContext):
 	contact = int(ids[2])
 	item = connection.selectOrders(cus_id)
 
-	if not connection.selectMyPerInOrderId(cus_id, orderId):
+	if not connection.selectMyPerInOrderId(cus_id, orderId)[0]:
 		if ex_id not in connection.selectMyPerInOrderId(cus_id, orderId):
 			if connection.checkExecutor(ex_id)[8] == 'busy':
 				await bot.answer_callback_query(c.id, show_alert = True, text = "⚠️ Исполнитель уже взялася за другой заказ, выберите другого исполнителя.")
@@ -264,7 +270,7 @@ async def callback_approve(c: types.CallbackQuery, state: FSMContext):
 																				"Вы уже отклонили этого исполнителя!")
 			else:
 				await bot.answer_callback_query(c.id, show_alert = True, text = "🔔 Уведомление:\n\n" 
-																				"Исполнитель добавлен в список \"Мои исполнители\". Чтоб взаимодействовать с ним, зайдите в этот раздел.")
+																				"Исполнитель добавлен в список \"На рассмотрении\". Чтоб взаимодействовать с ним, зайдите в этот раздел.")
 				connection.replaceReqToPer(cus_id, ex_id, orderId)	
 
 				await bot.send_message(ex_id, "<b>🔔 Уведомление:</b>\n\n"
@@ -299,18 +305,7 @@ async def callback_refusal(c: types.CallbackQuery, state: FSMContext):
 		await bot.answer_callback_query(c.id, show_alert = True, text = "🔔 Уведомление:\n\n"
 																		"Заявка была успешно отклонена!")
 		connection.deleteRequests(ex_id, orderId)
-		await bot.send_message(ex_id, f"<b>Заказчик:</b> <code>{item[orderId][1]}</code>\n"
-									  f"<b>Адреc:</b> <code>{item[orderId][2]}</code>\n\n"
-									  
-									  f"<b>Должность:</b> <code>{item[orderId][6]}</code>\n"
-									  f"<b>Время работы:</b> <code>{item[orderId][4]}</code>\n"
-									  f"<b>График:</b> <code>{item[orderId][3]}</code>\n"
-									  f"<b>Смена:</b> <code>{item[orderId][5]}</code>\n\n"
 
-									  f"<b>Требование:</b>\n<code>{item[orderId][14]}</code>\n\n"
-									  f"<b>Обязанности:</b>\n<code>{item[orderId][15]}</code>\n\n"
-
-									  f"{item[orderId][7]}")
 		await bot.send_message(ex_id, "🔔 <b>Уведомление:</b>\n\n"
 									  f"Заказчик <code>{connection.selectAll(cus_id)[0]}</code>, " 
 									  "отклонил вашу заявку на вакансию!",
@@ -319,6 +314,7 @@ async def callback_refusal(c: types.CallbackQuery, state: FSMContext):
 	elif ex_id in connection.selectMyPerInOrderId(cus_id, orderId):
 		await bot.answer_callback_query(c.id, show_alert = True, text = "⚠️ Ошибка:\n\n"
 																		"Вы уже одобрили этого исполнителя!")
+		
 	else:
 		await bot.answer_callback_query(c.id, show_alert = True, text = "⚠️ Ошибка:\n\n"
 																		"Вы уже отклонили этого исполнителя!")
@@ -332,11 +328,12 @@ async def callback_view(c: types.CallbackQuery, state: FSMContext):
 		ids = c.data[11:].split(',')
 		ex_id = ids[0]
 		order_id = ids[1]
+		status = ids[2]
 		all_data = connection.checkExecutor(ex_id)
 		contact = connection.selectAll(cus_id)[2]
 		now = datetime.datetime.now().strftime('%Y')		
 
-	if int(ex_id) in connection.selectMyPerInOrderId(int(cus_id), int(order_id)):
+	if status == 'my_performer':
 		try:
 			await bot.send_photo(c.from_user.id, photo = all_data[3], caption = f"<b>{all_data[1]}</b>\n\n"
 																				f"<b>  Дата рождения:</b> <code>{all_data[2]}</code>\n"
@@ -352,7 +349,7 @@ async def callback_view(c: types.CallbackQuery, state: FSMContext):
 																		f"<b>  Рейтинг:</b> <code>{all_data[6]}</code>",
 																	reply_markup = buttons.performerButtons(ex_id, order_id))
 	
-	elif int(ex_id) in connection.selectRequests(int(order_id), int(cus_id)):
+	elif status == 'my_request':
 		try:
 			await bot.send_photo(c.from_user.id, photo = all_data[3], caption = f"<b>{all_data[1]}</b>, <code>{int(now)-int(all_data[2][6:])}</code> лет\n\n"
 																				f"<b>  Рейтинг:</b> <code>{all_data[6]}</code>\n\n"
@@ -364,7 +361,22 @@ async def callback_view(c: types.CallbackQuery, state: FSMContext):
 																		f"<b>Навыки:</b>\n{all_data[5]}",
 																	reply_markup = buttons.requestButton(ex_id, order_id, contact))
 
-
+	elif status == 'my_pending':
+		try:
+			await bot.send_photo(c.from_user.id, photo = all_data[3], caption = f"<b>{all_data[1]}</b>\n\n"
+																				f"<b>  Дата рождения:</b> <code>{all_data[2]}</code>\n"
+																				f"<b>  Номер:</b> <code>+{all_data[4]}</code>\n\n"
+																				f"<b>Навыки:</b>\n{all_data[5]}\n\n"
+																				f"<b>  Рейтинг:</b> <code>{all_data[6]}</code>",
+																			reply_markup = buttons.pendingButtons(ex_id, order_id))
+		except Exception:
+			await bot.send_video(c.from_user.id, all_data[3], caption = f"<b>{all_data[1]}</b>\n\n"
+																		f"<b>  Дата рождения:</b> <code>{all_data[2]}</code>\n"
+																		f"<b>  Номер:</b> <code>+{all_data[4]}</code>\n\n"
+																		f"<b>Навыки:</b>\n{all_data[5]}\n\n"
+																		f"<b>  Рейтинг:</b> <code>{all_data[6]}</code>",
+																	reply_markup = buttons.pendingButtons(ex_id, order_id))
+	
 @fast_answer
 async def callback_no_view(c: types.CallbackQuery, state: FSMContext):
 	async with state.proxy() as data:

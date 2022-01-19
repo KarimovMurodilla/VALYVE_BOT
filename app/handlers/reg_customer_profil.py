@@ -192,7 +192,7 @@ async def info(message: types.Message, state: FSMContext):
 
 
 def register_reg_customer_profil_handlers(dp: Dispatcher):
-	dp.register_message_handler(cancel_handler, text=['Отменить', 'Назад'], state='*')
+	dp.register_message_handler(cancel_handler, text=['Отменить', 'Назад', 'Выйти из беседы'], state='*')
 	dp.register_message_handler(process_reg1, state = RegCustomer.step1)
 	dp.register_message_handler(process_img, content_types = 'photo', state = RegCustomer.step2)
 	dp.register_message_handler(process_contact_and_all_data, content_types = 'contact', is_sender_contact = True, state = RegCustomer.step3)

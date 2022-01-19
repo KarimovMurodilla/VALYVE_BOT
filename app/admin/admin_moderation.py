@@ -67,7 +67,8 @@ async def order_requests(c: types.CallbackQuery, state: FSMContext):
 
 			f"{orders[7]}",
 				reply_markup = admin_buttons.requestOrderBtns(orders[0], orders[12]))
-
+		await c.answer()
+		
 	except Exception as e:
 		print(e)
 		await bot.answer_callback_query(c.id, show_alert = True, text = "Ничего не найдено")	
@@ -151,26 +152,39 @@ async def callbackApprove(c: types.CallbackQuery, state: FSMContext):
 			actual_days = int(connection.selectOrderWhereCusId(cus_id, order_id)[16])
 			deletion_date = today + datetime.timedelta(days=actual_days)
 			connection.UpdateOrderStatus(cus_id, order_id, "Опубликован", str(deletion_date)[:10])
+			admin_connection.addView('ads', datetime.datetime.today().strftime('%d.%m.%Y'))
+			
+			await c.message.delete()
+			await bot.delete_message(c.from_user.id, c.message.message_id-1)
 			await bot.answer_callback_query(c.id, show_alert = True, text = "✅ Этот заказ опубликован")
+			await bot.send_message(c.from_user.id, "Админ панель", reply_markup = admin_buttons.admin_canc())
+
 
 
 		else:
 			actual_days = int(connection.selectOrderWhereCusId(cus_id, order_id)[16])
 			deletion_date = today + datetime.timedelta(days=actual_days)
 			connection.UpdateOrderStatus(cus_id, order_id, "Опубликован", str(deletion_date)[:10])
+			await c.message.delete()
 			await bot.answer_callback_query(c.id, show_alert = True, text = "✅ Этот заказ опубликован")
+			await bot.send_message(c.from_user.id, "Админ панель", reply_markup = admin_buttons.admin_canc())
 
 
 async def callbackReject(c: types.CallbackQuery, state: FSMContext):
 	ids = c.data[9:].split(',')
 	cus_id = ids[0]
 	order_id = ids[1]
+	price = connection.selectOrderWhereCusId(cus_id, order_id)[13]
 
 	if connection.selectOrderWhereCusId(cus_id, order_id)[11] == 'Опубликован':
 		await c.answer("⚠️ Ошибка:\n\nЭтот заказ уже опубликован")
 
 	else:
 		connection.UpdateOrderStatus(cus_id, order_id, "Отклонён", None)
+		connection.updateBalance(cus_id, price, '+')
+		connection.deletePayment(cus_id, price)
+		admin_connection.addView('ads', datetime.datetime.today().strftime('%d.%m.%Y'))
+
 		await bot.answer_callback_query(c.id, show_alert = True, text = "🗑 Этот заказ отклонён")
 
 
@@ -181,15 +195,25 @@ async def callbackEdit(c: types.CallbackQuery, state: FSMContext):
 	cus_id = ids[0]
 	order_id = ids[1]
 
-	async with state.proxy() as data:
-		data['cus_id'] = cus_id
-		data['order_id'] = order_id
 
-	await EditOrder.step1.set()
-	await bot.send_message(c.message.chat.id, ".", 
-		reply_markup = buttons.send_geo)
-	await bot.send_message(c.message.chat.id, "Отправьте мне <b>адрес места работы</b>, для корректного поиска исполнителей.", 
-		reply_markup = admin_buttons.skipBtn())
+	if connection.selectOrderWhereCusId(cus_id, order_id)[11] == 'Опубликован':
+		await c.answer("⚠️ Ошибка:\n\nЭтот заказ уже опубликован")
+
+	elif connection.selectOrderWhereCusId(cus_id, order_id)[11] == 'Отклонён':
+		await c.answer("⚠️ Ошибка:\n\nЭтот заказ уже oтклонён")
+
+	else:
+		admin_connection.addView('ads', datetime.datetime.today().strftime('%d.%m.%Y'))
+
+		async with state.proxy() as data:
+			data['cus_id'] = cus_id
+			data['order_id'] = order_id
+
+		await EditOrder.step1.set()
+		await bot.send_message(c.message.chat.id, ".", 
+			reply_markup = buttons.send_geo)
+		await bot.send_message(c.message.chat.id, "Отправьте мне <b>адрес места работы</b>, для корректного поиска исполнителей.", 
+			reply_markup = admin_buttons.skipBtn())
 
 async def process_output_location(message: types.Message, state: FSMContext):
 	async with state.proxy() as data:
@@ -338,6 +362,8 @@ async def process_output_without_comment(c: types.CallbackQuery, state: FSMConte
 
 
 async def callbackPublish(c: types.CallbackQuery, state: FSMContext):
+	await c.answer()
+
 	async with state.proxy() as data:
 		order_id = data['order_id']
 		cus_id = data['cus_id']
@@ -360,10 +386,6 @@ async def callbackPublish(c: types.CallbackQuery, state: FSMContext):
 
 	await bot.send_message(c.from_user.id, "🔔 <b>Уведомление:</b>\n\nПоздравляю, <b>заказ</b> успешно отредактирован! 🥳", reply_markup = admin_buttons.adminPanel())
 	await state.finish()
-
-
-
-
 
 
 async def callback_output_location(c: types.CallbackQuery, state: FSMContext):
@@ -642,6 +664,8 @@ async def callbackPNext(c: types.CallbackQuery, state: FSMContext):
 
 
 async def callbackPApprove(c: types.CallbackQuery, state: FSMContext):
+	admin_connection.addView('profils', datetime.datetime.today().strftime('%d.%m.%Y'))
+
 	await bot.delete_message(c.from_user.id, c.message.message_id)
 	ids = c.data[9:].split(',')
 	user_id = ids[0]
@@ -725,6 +749,8 @@ async def processPReject(message: types.Message, state: FSMContext):
 										"Ваша заявка был отклонена на изменение профиля.\n\n" 
 										f"<b>Причина:</b>\n{message.text}", reply_markup = admin_buttons.admin_canc())
 		await bot.send_message(message.chat.id, "Заявка отклонена!")
+
+		admin_connection.addView('profils', datetime.datetime.today().strftime('%d.%m.%Y'))
 		admin_connection.deleteRequestsProfil(user_id, status)
 
 
@@ -874,7 +900,8 @@ async def process_create5(message: types.Message, state: FSMContext):
 		date_registration = datetime.datetime.today().strftime('%d.%m.%Y - %H:%M')
 		ex_status = 'free'
 
-		# connection.UpdateExecutorProfil(ex_id, ex_name, date_of_birth, ex_pic, ex_contact, ex_skill)
+		admin_connection.addView('profils', datetime.datetime.today().strftime('%d.%m.%Y'))
+
 		try:
 			await bot.send_photo(
 				chat_id = message.chat.id, 
@@ -906,7 +933,7 @@ async def view_complaint(c: types.CallbackQuery, state: FSMContext):
 	data_1 = admin_connection.getComplaintsFromUser()
 
 	try:
-		if data[0] or data_1[0]:
+		if data[0]:
 			for n in range(len(data)):
 				await c.message.answer( 
 					f"<b>Заказчик:</b> <code>{connection.selectAll(data[n][1])[0]}</code>\n"
@@ -921,38 +948,35 @@ async def view_complaint(c: types.CallbackQuery, state: FSMContext):
 					f"<code>{data[n][3]}</code>",
 						reply_markup = admin_buttons.showReviewComplaintsBtns(data[n][0], data[n][1], data[n][2]))
 
+		elif data_1[0]:
+			for i in range(len(data_1)):
+				alldata = connection.getExecutorProfil(data_1[i][0])
+				try:
+					await bot.send_photo(
+						chat_id = c.from_user.id, 
+						photo = alldata[3], 
+						caption = f"<b>{alldata[1]}</b>\n\n"
+								  f"  <b>Дата рождения:</b> <code>{alldata[2]}</code>\n"
+								  f"  <b>Номер:</b> <code>+{alldata[4]}</code>\n\n"
+
+								  f"<b>Навыки:</b>\n{alldata[5]}\n\n" 
+								  f"  <b>Рейтинг:</b> <code>{alldata[6]}</code>")
+					await c.message.answer(f"Причина:\n<code>{data_1[i][1]}</code>",
+						reply_markup = admin_buttons.showUserComplaintsBtns(data_1[i][0], data_1[i][2]))
+					
+				
+				except:
+					await bot.send_video(
+						chat_id = c.from_user.id, 
+						video = alldata[3], 
+						caption = f"<b>{alldata[1]}</b>\n\n"
+							      f"  <b>Рейтинг:</b> <code>{alldata[6]}</code>\n\n"
+							      f"<b>Навыки:</b>\n{alldata[5]}"
+						)
+					await c.message.answer(f"Причина:\n<code>{data_1[i][1]}</code>",
+						reply_markup = admin_buttons.showUserComplaintsBtns(data_1[i][0], data_1[i][2]))
 	except Exception as e:
-		if data_1[0]:
-			await c.answer()
-
-		else:
-			await c.answer("Пусто!")
-
-
-	try:
-		for i in range(len(data_1)):
-			alldata = connection.getExecutorProfil(data_1[i][0])
-			await bot.send_photo(c.from_user.id, photo = alldata[3], caption = f"<b>{alldata[1]}</b>\n\n"
-																				f"  <b>Дата рождения:</b> <code>{alldata[2]}</code>\n"
-																				f"  <b>Номер:</b> <code>+{alldata[4]}</code>\n\n"
-
-																				f"<b>Навыки:</b>\n{alldata[5]}\n\n" 
-																				f"  <b>Рейтинг:</b> <code>{alldata[6]}</code>",
-																					reply_markup = admin_buttons.showUserComplaintsBtns(None, None, None))
-	except Exception as e:
-		print(type(e))
-		if type(e) == IndexError:
-			await c.answer("Пусто!")
-
-		else:
-			await bot.send_video(
-				chat_id = c.from_user.id, video = alldata[3], caption = 
-					f"<b>{alldata[1]}</b>\n\n"
-					f"  <b>Рейтинг:</b> <code>{alldata[6]}</code>\n\n"
-					f"<b>Навыки:</b>\n{alldata[5]}",
-						reply_markup = admin_buttons.showUserComplaintsBtns(None, None, None)
-				)
-
+		await c.answer("Ничего не найдено!", show_alert = True)
 
 
 async def callback_cdelete(c: types.CallbackQuery, state: FSMContext):
@@ -985,6 +1009,8 @@ async def callbackcConfirm(c: types.CallbackQuery, state: FSMContext):
 
 	admin_connection.deleteComplaintForReview(ex_id, cus_id, order_id)
 	connection.deleteRating(ex_id, cus_id, order_id)
+	admin_connection.addView('complaints', datetime.datetime.today().strftime('%d.%m.%Y'))
+
 
 	await c.message.delete()
 	await bot.send_message(ex_id, 
@@ -1041,6 +1067,8 @@ async def callback_cConfirm(c: types.CallbackQuery, state: FSMContext):
 
 	admin_connection.deleteComplaintForReview(ex_id, cus_id, order_id)
 	connection.UpdateReview(ex_id, cus_id, order_id, new_review)
+	admin_connection.addView('complaints', datetime.datetime.today().strftime('%d.%m.%Y'))
+
 
 	await c.message.delete()
 
@@ -1075,6 +1103,42 @@ async def callback_cConfirm(c: types.CallbackQuery, state: FSMContext):
 async def callback_cChangeCause(c: types.CallbackQuery, state: FSMContext):
 	await ProcessCDelete.step3.set()
 	await c.message.answer("Отправьте мне текст для отзыва.")
+
+
+async def callback_cReject(c: types.CallbackQuery, state: FSMContext):
+	ids = c.data[8:].split(',')
+	admin_connection.addView('complaints', datetime.datetime.today().strftime('%d.%m.%Y'))
+
+
+	try:
+		ex_id = ids[0]
+		cus_id = ids[1]
+		order_id = ids[2]
+		admin_connection.deleteComplaintForReview(ex_id, cus_id, order_id)
+		await c.message.delete()
+		await bot.delete_message(c.from_user.id, c.message.message_id-1)
+		await c.message.answer("Отклонено!")
+
+	except:
+		ex_id = ids[0]
+		rowid = ids[1]
+		admin_connection.deleteComplaintForUser(ex_id, rowid)
+		await c.message.delete()
+		await bot.delete_message(c.from_user.id, c.message.message_id-1)
+		await c.message.answer("Отклонено!")
+
+	await state.finish()
+
+
+# ----COMPLAINTS FOR USER----
+async def callback_ban_to_user(c: types.CallbackQuery, state: FSMContext):
+	ex_id = c.data[5:]
+	connection.UpdateExStatus(ex_id, 'Banned')
+	connection.deleteComplaintForUser(ex_id)
+	admin_connection.addView('complaints', datetime.datetime.today().strftime('%d.%m.%Y'))
+
+	await c.message.answer("Пользователь забанен!")
+
 
 
 def register_admin_moderation_handlers(dp: Dispatcher):
@@ -1134,4 +1198,6 @@ def register_admin_moderation_handlers(dp: Dispatcher):
 	dp.register_message_handler(process_change_review, state = ProcessCDelete.step3)
 	dp.register_callback_query_handler(callback_cConfirm, lambda c: c.data.startswith('cConfirm'), state = ProcessCDelete.step4)
 	dp.register_callback_query_handler(callback_cChangeCause, lambda c: c.data.startswith('cChange'), state = ProcessCDelete.step4)
+	dp.register_callback_query_handler(callback_cReject, lambda c: c.data.startswith('cReject'), state = '*')
 
+	dp.register_callback_query_handler(callback_ban_to_user, lambda c: c.data.startswith('cBan'), state = '*')

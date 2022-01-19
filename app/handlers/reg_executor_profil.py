@@ -186,8 +186,6 @@ async def process_no_skill(c: types.CallbackQuery, state: FSMContext):
 
 @checkStatusUser
 async def get_geo(message: types.Message, state: FSMContext):
-	# if message.text == 'Изменить геолокацию':
-	# 	state.finish()
 	ex_id = message.from_user.id
 
 	if connection.checkReferral(ex_id)[3] == 'Banned':
@@ -246,35 +244,40 @@ async def search_orders(message: types.Message, state: FSMContext):
 		data['lat'] = message.location.latitude
 		data['long'] = message.location.longitude
 
-	if not connection.selectAllOrders(data['lat'], data['long']):
-		await bot.send_message(message.chat.id, "Заказов не найдено!", reply_markup = buttons.back_to_menu)
-
-
+	if connection.checkExecutor(ex_id)[8] == 'busy':
+		await bot.send_message(message.chat.id, text = "Вы не можете искать заказы, пока не закончите начатый заказ!",
+				reply_markup = buttons.menu_executor)
+				
 	else:
-		try:
-			connection.nullPagination(ex_id)
-			pag = connection.selectPag(ex_id)
-			lat = data['lat']
-			lon = data['long']
-			orders = connection.selectAllOrders(lat, lon)[pag]
+		if not connection.selectAllOrders(data['lat'], data['long']):
+			await bot.send_message(message.chat.id, "Заказов не найдено!", reply_markup = buttons.back_to_menu)
 
-			await bot.send_message(message.chat.id, 
-				f"<b>Заказчик:</b> <code>{orders[1]}</code>\n"
-				f"<b>Расстояние:</b> <code>{getLocationInfo.calculate_distance(lat, lon, orders[8], orders[9])}</code> от Вас\n\n"
-				f"<b>Должность:</b> <code>{orders[6]}</code>\n"
-				f"<b>Время работы:</b> <code>{orders[4]}</code>\n"
-				f"<b>График:</b> <code>{orders[3]}</code>\n"
-				f"<b>Смена:</b> <code>{orders[5]}</code>\n\n"
 
-				f"<b>Требование:</b>\n<code>{orders[14]}</code>\n\n"
-				f"<b>Обязанности:</b>\n<code>{orders[15]}</code>\n\n"
+		else:
+			try:
+				connection.nullPagination(ex_id)
+				pag = connection.selectPag(ex_id)
+				lat = data['lat']
+				lon = data['long']
+				orders = connection.selectAllOrders(lat, lon)[pag]
 
-				f"{orders[7]}",
-					reply_markup = buttons.globalOrders(orders[0], orders[12]))
-			await bot.send_message(message.chat.id, 'Вот подборочка объявлений для Вас! 🥺', reply_markup = buttons.back_to_menu)
+				await bot.send_message(message.chat.id, 
+					f"<b>Заказчик:</b> <code>{orders[1]}</code>\n"
+					f"<b>Расстояние:</b> <code>{getLocationInfo.calculate_distance(lat, lon, orders[8], orders[9])}</code> от Вас\n\n"
+					f"<b>Должность:</b> <code>{orders[6]}</code>\n"
+					f"<b>Время работы:</b> <code>{orders[4]}</code>\n"
+					f"<b>График:</b> <code>{orders[3]}</code>\n"
+					f"<b>Смена:</b> <code>{orders[5]}</code>\n\n"
 
-		except:
-			await bot.send_message(message.chat.id, "<b>🔔 Уведомление:</b>\n\nВашем регионе не найдены заказы! Загляните к нам позже.", reply_markup = buttons.menu_executor)
+					f"<b>Требование:</b>\n<code>{orders[14]}</code>\n\n"
+					f"<b>Обязанности:</b>\n<code>{orders[15]}</code>\n\n"
+
+					f"{orders[7]}",
+						reply_markup = buttons.globalOrders(orders[0], orders[12]))
+				await bot.send_message(message.chat.id, 'Вот подборочка объявлений для Вас! 🥺', reply_markup = buttons.back_to_menu)
+
+			except:
+				await bot.send_message(message.chat.id, "<b>🔔 Уведомление:</b>\n\nВашем регионе не найдены заказы! Загляните к нам позже.", reply_markup = buttons.menu_executor)
 													
 
 
@@ -303,7 +306,7 @@ async def personal_cabinet(message: types.Message, state: FSMContext):
 
 																					f"<b>Навыки:</b>\n{alldata[5]}\n\n" 
 																					f"  <b>Рейтинг:</b> <code>{alldata[6]}</code>", 
-																					reply_markup = buttons.get_works(message.from_user.id))
+																						reply_markup = buttons.get_works(message.from_user.id))
 			except Exception as e:
 				print(e)
 				await bot.send_video(message.chat.id, alldata[3], caption = f'<b>{alldata[1]}</b>\n\n <b>Дата рождения:</b> <code>{alldata[2]}</code>\n <b>Номер:</b> <code>+{alldata[4]}</code>\n\n<b>Навыки:</b>\n{alldata[5]}\n\n <b>Рейтинг:</b> <code>{alldata[6]}</code>', reply_markup = buttons.get_works(message.from_user.id))

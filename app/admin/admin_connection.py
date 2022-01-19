@@ -11,13 +11,8 @@ with sql.connect(config.DB_ADMIN_PATH, check_same_thread=False) as con2:
 	cur2 = con2.cursor()
 
 
-
-
 today = datetime.datetime.today()
 week = today - datetime.timedelta(days=7)
-
-today = datetime.datetime.today().strftime('%d.%m.%Y')
-week = week.strftime('%d.%m.%Y')
 
 
 # -----------------FOR USERS-----------------
@@ -26,7 +21,7 @@ def allUsers():
 	return all_users[0][0]
 
 
-def orderByWeek():
+def usersByWeek():
 	date1 = cur.execute(f"SELECT count(*) FROM users WHERE date_start BETWEEN \'{week}\' AND \'{today}\'").fetchall()
 	return date1[0][0]
 
@@ -38,7 +33,7 @@ def allOrders():
 
 
 def ordersByWeek():
-	date1 = cur.execute(F"SELECT count(*) FROM orders WHERE date_order BETWEEN \'{week}\' AND \'{today}\'").fetchall()
+	date1 = cur.execute(f"SELECT count(*) FROM orders WHERE date_order BETWEEN \'{week}\' AND \'{today}\'").fetchall()
 	return date1[0][0]
 
 
@@ -51,9 +46,10 @@ def changeAdminTable(status, name):
 	cur2.execute("UPDATE admin_table SET status = ? WHERE name = ?", (status, name,))
 	con2.commit()
 
+
 def selectFromAdminTable():
-	sowim = cur2.execute("SELECT * FROM admin_table").fetchall()
-	return sowim
+	sfat = cur2.execute("SELECT * FROM admin_table").fetchall()
+	return sfat
 
 
 def selectUserFromRequestProfils(user_id, status):
@@ -61,6 +57,12 @@ def selectUserFromRequestProfils(user_id, status):
 	return soufat
 
 
+def selectStatuses(name):
+	response = cur2.execute("SELECT status FROM admin_table WHERE name = ?", (name,)).fetchone()
+	return response[0]
+
+
+# ----REQUEST PROFILS----
 def addRequestProfil(user_id, status, user_name = None, user_pic = None, user_contact = None, user_date_of_birth = None, user_skill = None):
 	if not selectUserFromRequestProfils(user_id, status):
 		if status == 'customer':
@@ -124,5 +126,30 @@ def deleteComplaintForReview(ex_id, cus_id, order_id):
 
 # ----COMPLAINT FOR REVIEW----
 def getComplaintsFromUser():
-	result = cur2.execute("SELECT * FROM complaints_for_user").fetchall()
+	result = cur2.execute("SELECT *, rowid FROM complaints_for_user").fetchall()
 	return result
+
+
+def deleteComplaintForUser(user_id, rowid):
+	cur2.execute("DELETE FROM complaints_for_user WHERE user_id = ? AND rowid = ?", (user_id, rowid,))
+	con2.commit()
+
+
+# ----VIEWS----
+def addView(column_name: str, date_view: str):
+	cur2.execute(f"INSERT INTO views (\'{column_name}\', date_view)VALUES(?,?)", (1, date_view,))
+	con2.commit()
+
+
+def getViews(column_name: str, date_today: str):
+	if column_name == 'ads':
+		result = cur2.execute("SELECT ads FROM views WHERE date_view = ?", (date_today,)).fetchall()
+		return result
+
+	elif column_name == 'profils':
+		result = cur2.execute("SELECT profils FROM views WHERE date_view = ?", (date_today,)).fetchall()
+		return result
+
+	elif column_name == 'complaints':
+		result = cur2.execute("SELECT complaints FROM views WHERE date_view = ?", (date_today,)).fetchall()
+		return result

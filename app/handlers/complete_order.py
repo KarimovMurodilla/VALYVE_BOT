@@ -34,6 +34,7 @@ async def callback_complete_order(c: types.CallbackQuery, state: FSMContext):
 
 		elif my_performers[0] is not None:
 			await CompleteOrder.step1.set()
+			await c.answer()
 			await bot.send_message(c.from_user.id, f"Оцените качество работы <code>{connection.getExecutorProfil(my_performers[0])[1]}</code>:", 
 				reply_markup = buttons.rating())
 
@@ -52,6 +53,7 @@ async def callback_change(c: types.CallbackQuery, state: FSMContext):
 		my_performers = connection.selectMyPerInOrderId(cus_id, order_id)
 		
 		await CompleteOrder.step1.set()
+		await c.answer()
 		await bot.send_message(c.from_user.id, f"Оцените качество работы <code>{connection.getExecutorProfil(my_performers[0])[1]}</code>:", 
 			reply_markup = buttons.rating())
 

@@ -83,19 +83,31 @@ async def callback_executor(c: types.CallbackQuery, state: FSMContext):
 
 
 async def callback_edit_ex(c: types.CallbackQuery, state: FSMContext):
-	try:
+	ex_id = c.data[15:]
+
+	if ex_id:
 		async with state.proxy() as data:
-			ex_id = data['user_id']
+			data['user_id'] = ex_id
+			data['comlaint_user'] = 'yes'
 			await EditExecutor.step1.set()
 			await bot.delete_message(c.message.chat.id, c.message.message_id)
 			await bot.send_message(c.message.chat.id, "Отправьте мне <b>Имя Отчество</b> исполнителя.",
 				reply_markup = admin_buttons.admin_canc())
-			
-	except:
-		await Breaking.step1.set()
-		await bot.delete_message(c.from_user.id, c.message.message_id)
-		await bot.send_message(c.from_user.id, "Отправьте мне <b>ID</b> пользователя",
-			reply_markup = admin_buttons.admin_canc())
+
+	else:
+		try:
+			async with state.proxy() as data:
+				ex_id = data['user_id']
+				await EditExecutor.step1.set()
+				await bot.delete_message(c.message.chat.id, c.message.message_id)
+				await bot.send_message(c.message.chat.id, "Отправьте мне <b>Имя Отчество</b> исполнителя.",
+					reply_markup = admin_buttons.admin_canc())
+				
+		except:
+			await Breaking.step1.set()
+			await bot.delete_message(c.from_user.id, c.message.message_id)
+			await bot.send_message(c.from_user.id, "Отправьте мне <b>ID</b> пользователя",
+				reply_markup = admin_buttons.admin_canc())
 
 
 async def process_create1(message: types.Message, state: FSMContext):
@@ -171,6 +183,9 @@ async def process_create5(message: types.Message, state: FSMContext):
 
 		connection.UpdateExecutorProfil(ex_id, ex_name, date_of_birth, ex_pic, ex_contact, ex_skill)
 		await bot.send_message(message.chat.id, "Профиль исполнителя успешно отредактирована!")
+
+		if data['complaint_user']:
+			connection.deleteComplaintForUser(ex_id)
 
 	await state.finish()
 	
@@ -340,78 +355,111 @@ async def process_unban(message: types.Message, state: FSMContext):
 
 
 async def callback_payment(c: types.CallbackQuery, state: FSMContext):
-	if admin_connection.selectFromAdminTable()[1][1] == '✅':
-		admin_connection.changeAdminTable('✖️', 'BOT_PAYMENT')
+	if admin_connection.selectFromAdminTable()[1][1] == '🟢':
+		admin_connection.changeAdminTable('🔴', 'BOT_PAYMENT')
 		await bot.edit_message_reply_markup(
 			chat_id = c.from_user.id, 
-			message_id = c.message.message_id,
-			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
-		await bot.answer_callback_query(c.id, show_alert = False, text = "Оплата отключено ✖️")
+				message_id = c.message.message_id,
+					reply_markup = admin_buttons.adminConsol(
+						sensor = admin_connection.selectFromAdminTable()[1][1],  
+							sensor2 = admin_connection.selectFromAdminTable()[0][1],  
+								sensor3= admin_connection.selectFromAdminTable()[2][1],  
+									sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
+		await c.answer("Оплата отключено ✖️")
 
 
-	elif admin_connection.selectFromAdminTable()[1][1] == '✖️':
-		admin_connection.changeAdminTable('✅', 'BOT_PAYMENT')
+	elif admin_connection.selectFromAdminTable()[1][1] == '🔴':
+		admin_connection.changeAdminTable('🟢', 'BOT_PAYMENT')
 		await bot.edit_message_reply_markup(
 			chat_id = c.from_user.id, 
-			message_id = c.message.message_id,
-			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
-		await bot.answer_callback_query(c.id, show_alert = False, text = "Оплата включено ✅")		
+				message_id = c.message.message_id,
+					reply_markup = admin_buttons.adminConsol(
+						sensor = admin_connection.selectFromAdminTable()[1][1],  
+							sensor2 = admin_connection.selectFromAdminTable()[0][1],  
+								sensor3= admin_connection.selectFromAdminTable()[2][1],  
+									sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
+		await c.answer("Оплата включено ✅")		
 
 
 async def callback_order_feed(c: types.CallbackQuery, state: FSMContext):
-	if admin_connection.selectFromAdminTable()[0][1] == '✅':
-		admin_connection.changeAdminTable('✖️', 'ORDER_REGISTRATION')
+	if admin_connection.selectFromAdminTable()[0][1] == '🟢':
+		admin_connection.changeAdminTable('🔴', 'ORDER_REGISTRATION')
 		await bot.edit_message_reply_markup(
 			chat_id = c.from_user.id, 
-			message_id = c.message.message_id,
-			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
-		await bot.answer_callback_query(c.id, show_alert = False, text = "Лента заказов отключено ✖️")
+				message_id = c.message.message_id,
+					reply_markup = admin_buttons.adminConsol(
+						sensor = admin_connection.selectFromAdminTable()[1][1],  
+							sensor2 = admin_connection.selectFromAdminTable()[0][1],  
+								sensor3= admin_connection.selectFromAdminTable()[2][1],  
+									sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
+		await message.answer("Лента заказов отключено ✖️")
 
 
-	elif admin_connection.selectFromAdminTable()[0][1] == '✖️':
-		admin_connection.changeAdminTable('✅', 'ORDER_REGISTRATION')
+	elif admin_connection.selectFromAdminTable()[0][1] == '🔴':
+		admin_connection.changeAdminTable('🟢', 'ORDER_REGISTRATION')
 		await bot.edit_message_reply_markup(
 			chat_id = c.from_user.id, 
-			message_id = c.message.message_id,
-			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
-		await bot.answer_callback_query(c.id, show_alert = False, text = "Лента заказов включено ✅")
+				message_id = c.message.message_id,
+					reply_markup = admin_buttons.adminConsol(
+						sensor = admin_connection.selectFromAdminTable()[1][1],  
+							sensor2 = admin_connection.selectFromAdminTable()[0][1],  
+								sensor3= admin_connection.selectFromAdminTable()[2][1],  
+									sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
+		await message.answer("Лента заказов включено ✅")
 
 
 async def callback_replenishment(c: types.CallbackQuery, state: FSMContext):
-	if admin_connection.selectFromAdminTable()[3][1] == '✅':
-		admin_connection.changeAdminTable('✖️', 'REPLENISHMENT')
+	if admin_connection.selectFromAdminTable()[3][1] == '🟢':
+		admin_connection.changeAdminTable('🔴', 'REPLENISHMENT')
 		await bot.edit_message_reply_markup(
 			chat_id = c.from_user.id, 
-			message_id = c.message.message_id,
-			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
-		await bot.answer_callback_query(c.id, show_alert = False, text = "Пополнение отключено ✖️")
+				message_id = c.message.message_id,
+					reply_markup = admin_buttons.adminConsol(
+						sensor = admin_connection.selectFromAdminTable()[1][1],  
+							sensor2 = admin_connection.selectFromAdminTable()[0][1],  
+								sensor3= admin_connection.selectFromAdminTable()[2][1],  
+									sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
+		await message.answer("Пополнение отключено ✖️")
 
 
-	elif admin_connection.selectFromAdminTable()[3][1] == '✖️':
-		admin_connection.changeAdminTable('✅', 'REPLENISHMENT')
+	elif admin_connection.selectFromAdminTable()[3][1] == '🔴':
+		admin_connection.changeAdminTable('🟢', 'REPLENISHMENT')
 		await bot.edit_message_reply_markup(
 			chat_id = c.from_user.id, 
-			message_id = c.message.message_id,
-			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
-		await bot.answer_callback_query(c.id, show_alert = False, text = "Пополнение включено ✅")		
+				message_id = c.message.message_id,
+					reply_markup = admin_buttons.adminConsol(
+						sensor = admin_connection.selectFromAdminTable()[1][1],  
+							sensor2 = admin_connection.selectFromAdminTable()[0][1],  
+								sensor3= admin_connection.selectFromAdminTable()[2][1],  
+									sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
+		await message.answer("Пополнение включено ✅")		
+
 
 async def callback_ads(c: types.CallbackQuery, state: FSMContext):
-	if admin_connection.selectFromAdminTable()[2][1] == '✅':
-		admin_connection.changeAdminTable('✖️', 'ADS')
+	if admin_connection.selectFromAdminTable()[2][1] == '🟢':
+		admin_connection.changeAdminTable('🔴', 'ADS')
 		await bot.edit_message_reply_markup(
 			chat_id = c.from_user.id, 
-			message_id = c.message.message_id,
-			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
-		await bot.answer_callback_query(c.id, show_alert = False, text = "Объявление отключено ✖️")
+				message_id = c.message.message_id,
+					reply_markup = admin_buttons.adminConsol(
+						sensor = admin_connection.selectFromAdminTable()[1][1],  
+							sensor2 = admin_connection.selectFromAdminTable()[0][1],  
+								sensor3= admin_connection.selectFromAdminTable()[2][1],  
+									sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
+		await message.answer("Объявление отключено ✖️")
 
 
-	elif admin_connection.selectFromAdminTable()[2][1] == '✖️':
-		admin_connection.changeAdminTable('✅', 'ADS')
+	elif admin_connection.selectFromAdminTable()[2][1] == '🔴':
+		admin_connection.changeAdminTable('🟢', 'ADS')
 		await bot.edit_message_reply_markup(
 			chat_id = c.from_user.id, 
-			message_id = c.message.message_id,
-			reply_markup = admin_buttons.adminConsol(sensor = admin_connection.selectFromAdminTable()[1][1],  sensor2 = admin_connection.selectFromAdminTable()[0][1],  sensor3= admin_connection.selectFromAdminTable()[2][1],  sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
-		await bot.answer_callback_query(c.id, show_alert = False, text = "Объявление включено ✅")		
+				message_id = c.message.message_id,
+					reply_markup = admin_buttons.adminConsol(
+						sensor = admin_connection.selectFromAdminTable()[1][1],  
+							sensor2 = admin_connection.selectFromAdminTable()[0][1],  
+								sensor3= admin_connection.selectFromAdminTable()[2][1],  
+									sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
+		await message.answer("Объявление включено ✅")		
 
 
 def register_admin_consol_handlers(dp: Dispatcher):
@@ -430,7 +478,7 @@ def register_admin_consol_handlers(dp: Dispatcher):
 	dp.register_message_handler(process_contact_if_not_img, content_types = 'contact', state = EditCustomer.step4)
 
 	dp.register_callback_query_handler(callback_executor, lambda c: c.data == 'executor',  state = '*')
-	dp.register_callback_query_handler(callback_edit_ex, lambda c: c.data == 'edit_profil_ex', state = '*')
+	dp.register_callback_query_handler(callback_edit_ex, lambda c: c.data.startswith('edit_profil_ex'), state = '*')
 	dp.register_callback_query_handler(callback_ban_ex, lambda c: c.data == 'ban_ex', state = '*')
 	dp.register_callback_query_handler(callback_unban_ex, lambda c: c.data == 'unban_ex', state = '*')
 	dp.register_message_handler(process_create1, state = EditExecutor.step1)

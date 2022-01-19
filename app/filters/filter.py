@@ -15,10 +15,11 @@ async def filter_user(message: types.Message):
 
 
 async def getFileId(message: types.Message):
-	print(message.photo[-1].file_id)
-	await bot.send_photo(message.chat.id, photo = message.photo[-1].file_id, caption = 'smth')
+	print(message.location.address)
+	# print(message.photo[-1].file_id)
+	# await bot.send_photo(message.chat.id, photo = message.photo[-1].file_id, caption = 'smth')
 
 
 def register_filter_handlers(dp: Dispatcher):
     dp.register_message_handler(filter_user, content_types = types.ContentTypes.ANY)
-    dp.register_message_handler(getFileId, content_types = ['document', 'photo'], state = '*')
+    dp.register_message_handler(getFileId, content_types = ['location', 'venue'], state = '*')

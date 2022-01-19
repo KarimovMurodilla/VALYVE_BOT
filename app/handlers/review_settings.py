@@ -33,17 +33,22 @@ def fast_answer(func):
 	return wrapper
 
 
-@fast_answer
 async def callback_answer_to_review(c: types.CallbackQuery, state: FSMContext):
 	ids = c.data[7:].split(',')
-	async with state.proxy() as data:
-		data['ex_id'] = ids[0]
-		data['cus_id'] = ids[1]
-		data['order_id'] = ids[2]
 
-	await AnswerToReview.step1.set()
-	await bot.send_message(c.from_user.id, "Что вы хотите ответить на этот отзыв?", 
-		reply_markup = buttons.back_canc)
+	if not connection.selectReview(c.from_user.id, ids[1], ids[2])[5]:
+		async with state.proxy() as data:
+			data['ex_id'] = ids[0]
+			data['cus_id'] = ids[1]
+			data['order_id'] = ids[2]
+
+		await AnswerToReview.step1.set()
+		await c.answer()
+		await bot.send_message(c.from_user.id, "Что вы хотите ответить на этот отзыв?", 
+			reply_markup = buttons.back_canc)
+
+	else:
+		await c.answer("Вы уже ответили на отзыв!", show_alert = True)
 
 
 async def process_answer(message: types.Message, state: FSMContext):
@@ -86,6 +91,8 @@ async def callback_publish_answer(c: types.CallbackQuery, state: FSMContext):
 		await c.message.answer("🔔 <b>Уведомление:</b>\n\n"
 							  f"Ваш ответ опубликован!\nТеперь его видят остальные пользователи.",
 							  	reply_markup = buttons.autoMenu(connection.checkUserStatus(c.from_user.id)[0]))
+
+		await state.finish()
 
 
 @fast_answer
@@ -167,12 +174,21 @@ async def input_complaint(message: types.Message, state: FSMContext):
 		now = datetime.datetime.now().strftime('%Y')
 
 		await ComplaintToRequest.next()
-		await bot.send_photo(
-				   chat_id = message.chat.id,
-				   photo = all_data[3], 
-				   caption = f"<b>{all_data[1]}</b>, <code>{int(now)-int(all_data[2][6:])}</code> лет\n\n"
-							 f"<b>  Рейтинг:</b> <code>{all_data[6]}</code>\n\n"
-							 f"<b>Навыки:</b>\n{all_data[5]}")
+		try:
+			await bot.send_photo(
+					   chat_id = message.chat.id,
+					   photo = all_data[3], 
+					   caption = f"<b>{all_data[1]}</b>, <code>{int(now)-int(all_data[2][6:])}</code> лет\n\n"
+								 f"<b>  Рейтинг:</b> <code>{all_data[6]}</code>\n\n"
+								 f"<b>Навыки:</b>\n{all_data[5]}")
+		except:
+			await bot.send_video(
+					   chat_id = message.chat.id,
+					   video = all_data[3], 
+					   caption = f"<b>{all_data[1]}</b>, <code>{int(now)-int(all_data[2][6:])}</code> лет\n\n"
+								 f"<b>  Рейтинг:</b> <code>{all_data[6]}</code>\n\n"
+								 f"<b>Навыки:</b>\n{all_data[5]}")
+
 		await message.answer(f"<b>Причина:</b>\n<code>{message.text}</code>", 
 			reply_markup = buttons.answerSets(answer = False, r = 2))
 
@@ -183,6 +199,7 @@ async def send_complaint_to_admin(c: types.CallbackQuery, state: FSMContext):
 		complaint = data['complaint']
 
 		admin_connection.addUserComplaint(ex_id, complaint)
+		await c.message.delete()
 		await c.message.answer("Ваше жалоба отправлена на модерции")
 
 		await state.finish()

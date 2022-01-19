@@ -1,4 +1,4 @@
-import asyncio
+import time
 import datetime
 import random
 from pyqiwip2p import QiwiP2P
@@ -29,7 +29,7 @@ class CreateOrder(StatesGroup):
 
 def checkStatus(func):
 	async def wrapper(c: types.CallbackQuery, state: FSMContext):
-		if admin_connection.selectFromAdminTable()[0][1] == '✖️':
+		if admin_connection.selectFromAdminTable()[0][1] == '🔴':
 			await bot.send_message(c.from_user.id, "Приносим извинения! Данная функция временно закрыта!",
 				reply_markup = buttons.menu_customer)
 		else:
@@ -38,7 +38,21 @@ def checkStatus(func):
 
 
 @checkStatus
+async def process_get_create_order(c: types.CallbackQuery, state: FSMContext):
+	await c.answer()
+	await bot.send_photo(
+		chat_id = c.from_user.id,
+		photo = file_ids.PHOTO_ADMIN['publication_rules'],
+		caption = "- Объявление остаётся в ленте на выбранное Вами время, мы оставляем за собой право отказать в публикации объявления в случае мошенничества или маскировки под вакансию рекламы и работы, запрещенной законом (Закладки, Операторы наркочатов).\n\n"
+				  "- В публикации объявления может быть отказано если в нём присутствует ненормативная лексика.\n\n"
+				  "- Также можем отказать в публикации сомнительного объявления (По мнению модерации).",
+			reply_markup = buttons.get_create_order()
+		)
+
+
+@checkStatus
 async def process_get_location(c: types.CallbackQuery, state: FSMContext):
+	await c.message.delete()
 	await CreateOrder.step1.set()
 	
 	try:
@@ -48,7 +62,6 @@ async def process_get_location(c: types.CallbackQuery, state: FSMContext):
 			await bot.send_message(c.message.chat.id, ".", reply_markup = buttons.send_geo)
 			await bot.send_message(c.message.chat.id, "Отправьте мне геолокацию места работы, для корректного поиска исполнителей.",
 				reply_markup = buttons.skipBtn())
-
 
 
 	except Exception as e:
@@ -393,28 +406,33 @@ async def cSkip_output_respons(c: types.CallbackQuery, state: FSMContext):
 
 @checkStatus
 async def process_get_publish(c: types.CallbackQuery, state: FSMContext):
-	async with state.proxy() as data:
-		allowance = int(data['payment_for_waiting'])
+	try:
+		async with state.proxy() as data:
+			allowance = int(data['payment_for_waiting'])
 
-		frst = int(admin_connection.selectIcOneTime()[0][0])
-		scnd = int(admin_connection.selectIcOneTime()[1][0])
-		thrd = int(admin_connection.selectIcOneTime()[2][0])
+			frst = int(admin_connection.selectIcOneTime()[0][0])
+			scnd = int(admin_connection.selectIcOneTime()[1][0])
+			thrd = int(admin_connection.selectIcOneTime()[2][0])
 
-		total_1 = allowance*frst+25*frst
-		total_2 = allowance*scnd+25*scnd
-		total_3 = allowance*thrd+25*thrd
+			total_1 = allowance*frst+25*frst
+			total_2 = allowance*scnd+25*scnd
+			total_3 = allowance*thrd+25*thrd
 
-		await bot.send_photo(
-			chat_id = c.message.chat.id, 
-			photo = file_ids.PHOTO['price'],
-			caption = f"<b>1.</b> <code>30</code> дня в ленте - <code>{total_1}</code> <code>₽</code>\n"
-					  f"<b>2.</b> <code>90</code> дней в ленте - <code>{total_2}</code> <code>₽</code>\n"
-					  f"<b>3.</b> <code>180</code> дней в ленте - <code>{total_3}</code> <code>₽</code>\n",
-						reply_markup = buttons.menuPrice(total_1, total_2, total_3))
+			await bot.send_photo(
+				chat_id = c.message.chat.id, 
+				photo = file_ids.PHOTO['price'],
+				caption = f"<b>1.</b> <code>30</code> дня в ленте - <code>{total_1}</code> <code>₽</code>\n"
+						  f"<b>2.</b> <code>90</code> дней в ленте - <code>{total_2}</code> <code>₽</code>\n"
+						  f"<b>3.</b> <code>180</code> дней в ленте - <code>{total_3}</code> <code>₽</code>\n",
+							reply_markup = buttons.menuPrice(total_1, total_2, total_3))
+	except KeyError:
+		await c.message.delete()
+		await bot.delete_message(c.from_user.id, c.message.message_id-1)
 
 
 @checkStatus
 async def process_pay(c: types.CallbackQuery, state: FSMContext):
+	await c.answer()
 	try:
 		ids = c.data[6:].split(',')
 		days = ids[0]
@@ -435,7 +453,7 @@ async def check_payment(c: types.CallbackQuery, state: FSMContext):
 		user_id = c.from_user.id
 		price = int(c.data[10:])
 		today = datetime.datetime.today()
-		dmy = datetime.datetime.today().strftime('%d.%m.%Y')
+		# dmy = datetime.datetime.today().strftime('%d.%m.%Y')
 		user_balance = int(connection.get_id(user_id)[6])
 			
 
@@ -462,10 +480,12 @@ async def check_payment(c: types.CallbackQuery, state: FSMContext):
 				await bot.delete_message(c.message.chat.id, c.message.message_id)
 
 			connection.updateBalance(user_id, price, '-')
-			connection.createNewOrder(user_id, cus_name[0], cus_adress, cus_work_graphic, cus_work_day, cus_bid, cus_position, cus_comment, cus_lat, cus_long, dmy, order_status, order_id, price, requirement, respons, actual_days)
+			connection.addPayment(user_id, 'to_order', price, today)
+			connection.createNewOrder(user_id, cus_name[0], cus_adress, cus_work_graphic, cus_work_day, cus_bid, cus_position, cus_comment, 
+				cus_lat, cus_long, today, order_status, order_id, price, requirement, respons, actual_days, allowance)
 
-			await bot.answer_callback_query(c.id, show_alert = True, text = "🔔 <b>Уведомление:</b>\n\nПоздравляю, оплата прошла успешно!")
-			await bot.send_message(c.from_user.id, "Главное меню")
+			await bot.send_message(c.from_user.id, "<b>🔔 Уведомление:</b>\n\nПоздравляю, оплата прошла успешно!", reply_markup = buttons.autoMenu(connection.checkUserStatus(c.from_user.id)[0]))
+			# await bot.send_message(c.from_user.id, "Главное меню", reply_markup = buttons.autoMenu(connection.checkUserStatus(c.from_user.id)[0]))
 			await state.finish()
 		else:
 			await bot.answer_callback_query(c.id, show_alert = True, text = "⚠️ Ошибка:\n\n"
@@ -478,6 +498,7 @@ async def check_payment(c: types.CallbackQuery, state: FSMContext):
 
 
 def register_reg_order_handlers(dp: Dispatcher):
+	dp.register_callback_query_handler(process_get_create_order, lambda c: c.data == 'get_create',  state = '*')    
 	dp.register_callback_query_handler(process_get_location, lambda c: c.data == 'create' or c.data == 'change',  state = '*')    
 	dp.register_callback_query_handler(process_get_publish, lambda c: c.data == 'publish',  state = '*')
 

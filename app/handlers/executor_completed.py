@@ -18,6 +18,10 @@ class ExecutorWasComplete(StatesGroup):
 	step6 = State()
 
 
+class UnderConsideration(StatesGroup):
+	step1 = State()
+	step2 = State()
+
 
 async def callback_the_end(c: types.CallbackQuery, state: FSMContext):
 	ids = c.data[8:].split(',')
@@ -33,7 +37,7 @@ async def callback_the_end(c: types.CallbackQuery, state: FSMContext):
 			data['order_id'] = ids[1]
 			data['ex_id'] = c.from_user.id
 
-		
+		await c.answer()
 		await bot.send_message(c.from_user.id, "Вы действительно хотите завершить заказ?",
 			reply_markup = buttons.yesNo())
 
@@ -162,6 +166,60 @@ async def process_publish(c: types.CallbackQuery, state: FSMContext):
 
 		await state.finish()
 
+# ----UNDER CONSIDERATION---
+async def callback_con_finish(c: types.CallbackQuery, state: FSMContext):
+	ids = c.data[11:].split(',')
+
+	if c.from_user.id not in connection.selectMyPerInOrderId(ids[0], ids[1]):
+		await bot.answer_callback_query(c.id, show_alert = True, text = "Вы уже завершили этот заказ!")
+
+	else:
+		await UnderConsideration.step1.set()
+		
+		async with state.proxy() as data:
+			data['cus_id'] = ids[0]
+			data['order_id'] = ids[1]
+			data['ex_id'] = c.from_user.id
+
+		await c.answer()
+		await bot.send_message(c.from_user.id, "Вы действительно хотите завершить заказ?",
+			reply_markup = buttons.yesNo())
+
+
+async def process_finish_under_consideration(c: types.CallbackQuery, state: FSMContext):
+	async with state.proxy() as data:
+		cus_id = data['cus_id']
+		order_id = data['order_id']
+		ex_id = data['ex_id']	
+
+	
+	await bot.delete_message(c.from_user.id, c.message.message_id)
+	await bot.send_message(c.from_user.id, "Заказ завершён!\nТеперь вы можете брать новые заказы.",
+		reply_markup = buttons.menu_executor)
+
+	connection.UpdateExStatus(c.from_user.id, 'free')
+	connection.deleteMyPer(int(ex_id), int(cus_id), int(order_id))	
+
+	await bot.send_message(cus_id, f"Исполнитель <code>{connection.getExecutorProfil(c.from_user.id)[1]}</code> закончил с Вами работу.")
+
+
+async def callback_write_to_cus(c: types.CallbackQuery, state: FSMContext):
+	cus_id = c.data[13:]
+
+	async with state.proxy() as data:
+		data['cus_id'] = cus_id
+
+	await UnderConsideration.step2.set()
+	await c.answer()
+	await bot.send_message(c.from_user.id, "Напишите что хотите отправить на заказчика:", 
+		reply_markup = buttons.leaveChat())
+
+
+async def start_of_conversation(message: types.Message, state: FSMContext):
+	async with state.proxy() as data:
+		cus_id = data['cus_id']
+
+		await bot.send_message(cus_id, message.text, reply_markup = buttons.replyTo(message.from_user.id))
 
 
 def register_executor_completed_handlers(dp: Dispatcher):
@@ -175,3 +233,9 @@ def register_executor_completed_handlers(dp: Dispatcher):
 
 	dp.register_callback_query_handler(process_change_rate, lambda c: c.data.startswith('toChange'),  state = '*')
 	dp.register_callback_query_handler(process_publish, lambda c: c.data.startswith('toPublish'),  state = '*')
+
+	dp.register_callback_query_handler(callback_con_finish, lambda c: c.data.startswith('con_finish'),  state = '*')
+	dp.register_callback_query_handler(process_finish_under_consideration, lambda c: c.data == 'yep',  state = UnderConsideration.step1)
+
+	dp.register_callback_query_handler(callback_write_to_cus, lambda c: c.data.startswith('write_to_cus'),  state = '*')
+	dp.register_message_handler(start_of_conversation, state = UnderConsideration.step2)
