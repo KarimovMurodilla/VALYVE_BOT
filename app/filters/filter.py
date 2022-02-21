@@ -15,9 +15,14 @@ async def filter_user(message: types.Message):
 
 
 async def getFileId(message: types.Message):
-	print(message.location.address)
-	# print(message.photo[-1].file_id)
-	# await bot.send_photo(message.chat.id, photo = message.photo[-1].file_id, caption = 'smth')
+	# selectOrder = connection.selectAllOrders()
+	cus_lat = message.location.latitude
+	cus_long = message.location.longitude
+
+	print(connection.selectAllOrders(cus_lat, cus_long))
+
+	# for n in range(len(selectOrder)):
+	# 	print(f"{selectOrder[n][1]}-{getLocationInfo.calculate_km(cus_lat, cus_long, selectOrder[n][8], selectOrder[n][9])}")
 
 
 def register_filter_handlers(dp: Dispatcher):

@@ -137,11 +137,11 @@ async def text_comment(message: types.Message, state: FSMContext):
 		orderData = connection.selectOrderWhereCusId(cus_id, order_id)
 		cus_name = connection.selectAll(cus_id)[0]
 
-		await bot.send_message(cus_id, f"<b>Отзыв от #</b> <code>{cus_id}</code>\n\n"
-												f"<b>Заказчик:</b> <code>{orderData[1]}</code>\n"
-												f"<b>Адрес:</b> <code>{orderData[2]}</code>\n\n"
-												f"{order}\n\n"
-												f"<b>Отзыв:</b> {review}", disable_web_page_preview = True)	
+		await bot.send_message(cus_id,  f"<b>Отзыв от #</b> <code>{cus_id}</code>\n\n"
+										f"<b>Заказчик:</b> <code>{orderData[1]}</code>\n"
+										f"<b>Адрес:</b> <code>{orderData[2]}</code>\n\n"
+										f"{order}\n\n"
+										f"<b>Отзыв:</b> {review}", disable_web_page_preview = True)	
 		await bot.send_message(cus_id, "Верно или хотите изменить отзыв ?", reply_markup = buttons.realOrNot())
 
 
@@ -149,7 +149,9 @@ async def text_comment(message: types.Message, state: FSMContext):
 async def callback_publish(c: types.CallbackQuery, state: FSMContext):
 	await bot.delete_message(c.from_user.id, c.message.message_id)
 	await bot.delete_message(c.from_user.id, c.message.message_id-1)
-	await c.message.answer("Сотрудничество завершено!", reply_markup = buttons.menu_customer)
+	await c.message.answer("🔔 Уведомление:\n\n"
+						"Вы успешно завершили сотрудничество с исполнителем!", 
+							reply_markup = buttons.menu_customer)
 
 	async with state.proxy() as data:
 		cus_id = c.from_user.id
@@ -170,18 +172,16 @@ async def callback_publish(c: types.CallbackQuery, state: FSMContext):
 
 	await bot.send_message(ex_id, "<b>🔔 Уведомление:</b>\n\n"
 								 f"Заказчик <code>{orderData[1]}</code>, завершил с Вами заказ! Теперь вы можете откликаться на новые заказы.")
-		
+	
+	if orderData[-2] == 'stock':
+		payment_for_waiting = int(orderData[-1])
+		response_data = connection.selectAllFromCusOr(cus_id, order_id)
+		date = response_data[4].split(',')
 
-	payment_for_waiting = int(orderData[-1])
-	response_data = connection.selectAllFromCusOr(cus_id, order_id)
-	date = response_data[4].split(',')
-
-
-	date1 = datetime.datetime.now()
-	date2 = datetime.datetime(day=int(date[2]), month=int(date[1]), year=int(date[0]))
-	timedelta = date1-date2
-	connection.updateBalance(ex_id, timedelta.days * payment_for_waiting, '+')
-	print(timedelta.days * payment_for_waiting)
+		date1 = datetime.datetime.now()
+		date2 = datetime.datetime(day=int(date[2]), month=int(date[1]), year=int(date[0]))
+		timedelta = date1-date2
+		connection.updateBalance(ex_id, timedelta.days * payment_for_waiting, '+')
 
 
 	await state.finish()
@@ -221,7 +221,8 @@ async def callback_end_pending(c: types.CallbackQuery, state: FSMContext):
 
 async def callback_yes_end_pending(c: types.CallbackQuery, state: FSMContext):
 	await bot.delete_message(c.from_user.id, c.message.message_id)
-	await bot.send_message(c.from_user.id, "Сотрудничество завершено!")
+	await bot.send_message(c.from_user.id,  "🔔 Уведомление:\n\n"
+											"Вы успешно завершили сотрудничество с исполнителем!")
 
 	async with state.proxy() as data:
 		cus_id = c.from_user.id

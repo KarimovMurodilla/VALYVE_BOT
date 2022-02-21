@@ -49,15 +49,23 @@ async def callback_call_performer(c: types.CallbackQuery, state: FSMContext):
 			reply_markup = buttons.back_canc)
 
 	else:
-		await c.answer("⚠️ Ошибка:\n\nУ вас еще не имеется исполнитель!!", show_alert = True)
+		await c.answer(
+			"⚠️ Ошибка:\n\n"
+			"Вы не можете вызвать исполнителя, пока он не появится в \"Мои исполнители\"", 
+				show_alert = True
+			)
 
 
 async def process_call_performer(message: types.Message, state: FSMContext):
-	y = datetime.datetime.now().year
+	now = datetime.datetime.now().strftime("%d.%m.%Y").split('.')
 	date = message.text.split('.')
-	
+
 	try:
-		if int(date[0]) <= 31 and int(date[1]) <= 12 and int(date[2]) >= y:
+		d = datetime.date(int(now[2]), int(now[1]), int(now[0]))
+		d1 = datetime.date(int(date[2]), int(date[1]), int(date[0]))
+		delta = d1-d
+
+		if delta.days > 0:
 			await CallPerformer.step2.set()
 			async with state.proxy() as data:
 				data['start_day'] = message.text
@@ -74,20 +82,28 @@ async def process_call_performer(message: types.Message, state: FSMContext):
 
 
 async def process_output_comment(message: types.Message, state: FSMContext):
-	y = datetime.datetime.now().year
+	now = datetime.datetime.now()
 	date = message.text.split('.')
 
 	try:
-		if int(date[0]) <= 31 and int(date[1]) <= 12 and int(date[2]) >= y:
-			async with state.proxy() as data:
-				data['end_day'] = message.text
+		async with state.proxy() as data:
+			data['end_day'] = message.text
+			start_day = data['start_day']
 
+			s = start_day.split('.')
+			e = data['end_day'].split('.')
+
+			d = datetime.date(int(s[2]), int(s[1]), int(s[0]))
+			d1 = datetime.date(int(e[2]), int(e[1]), int(e[0]))
+			delta = d1-d
+
+			if delta.days > 0:
 				await message.answer("Хотите указать комментарий ?",
 					reply_markup = buttons.skipBtn())
 				await CallPerformer.step3.set()
 
-		else:
-			await message.answer("Укажите дату конца работы. В таком формате (день.месяц.год)")
+			else:
+				await message.answer("Укажите дату конца работы. В таком формате (день.месяц.год)")
 			
 	except Exception as e:
 		print(e)
@@ -151,7 +167,9 @@ async def callback_send_call(c: types.CallbackQuery, state: FSMContext):
 
 		
 		await c.message.delete()
-		await c.message.answer("✅ Вызов отправлено")
+		await c.message.answer( "🔔 <b>Уведомление:</b>\n\n"
+								"Сообщение отправлено с просьбой выйти на указанное Вами время", 
+									reply_markup = buttons.menu_customer)
 		await bot.send_message(ex_data, "🔔 Уведомление:\n\n"
 										f"Заказчик <code>{cus_data[0]}</code>, Вызывает вас на {delta.days} дней.\n\n"
 										f"Начало: {start_day}\n"
@@ -202,7 +220,7 @@ async def callback_send_refuse(c: types.CallbackQuery, state: FSMContext):
 		await bot.send_message(cus_id, "🔔 Уведомление:\n\n"
 									   f"Исполнитель {connection.checkExecutor(user_id)[1]} отказался выходить.\n\n"
 									   f"Причина:\n<code>{comment}</code>",
-									   		reply_markup = buttons.findNewEx(order_id, start_day, end_day))
+									   		reply_markup = buttons.findNewEx())
 
 
 async def callback_change_refuse(c: types.CallbackQuery, state: FSMContext):
@@ -230,20 +248,33 @@ async def callback_find_new_ex(c: types.CallbackQuery, state: FSMContext):
 	order_id = ids[0]
 	start_day = ids[1]
 	end_day = ids[2]
+	ex_id = ids[3]
 	item = connection.selectOrders(user_id)[int(order_id)]
+
+	s = start_day.split('.')
+	e = end_day.split('.')
+
+	d = datetime.date(int(s[2]), int(s[1]), int(s[0]))
+	d1 = datetime.date(int(e[2]), int(e[1]), int(e[0]))
+	delta = d1-d
 
 	async with state.proxy() as data:
 		data['order_id'] = order_id
+		data['start_day'] = start_day
+		data['end_day'] = end_day
+		data['comment'] = item[7]
+		data['ex_id'] = ex_id
+
 
 
 	await FindNewEx.step1.set()
 	await c.message.answer( f"<b>Заказчик:</b> <code>{item[1]}</code>\n"
 						    f"<b>Адреc:</b> <code>{item[2]}</code>\n\n"
 
-						    f"Начало: {start_day}\n\n"
+						    f"Начало: <code>{start_day}</code>\n\n"
 						  
 						    f"<b>Должность:</b> <code>{item[6]}</code>\n"
-						    f"<b>Время работы:</b> <code>{item[4]}</code>\n"
+						    f"<b>Время работы:</b> <code>{delta.days}</code>\n"
 						    f"<b>График:</b> <code>{item[3]}</code>\n"
 						    f"<b>Смена:</b> <code>{item[5]}</code>\n\n"
 
@@ -366,15 +397,18 @@ async def callback_publish_new_order(c: types.CallbackQuery, state: FSMContext):
 		s = start_day.split('.')
 		e = end_day.split('.')
 
+		date_start = f"{s[2]}-{s[1]}-{s[0]} 00:00:00.000000"
+
 		d = datetime.date(int(s[2]), int(s[1]), int(s[0]))
 		d1 = datetime.date(int(e[2]), int(e[1]), int(e[0]))
 		delta = d1-d
 
-		payment_for_waiting = delta.days
+		actual_days = delta.days
 
 		await c.message.delete()
-		await c.message.answer("Ваш заказ отправлен на модерацию")
-		connection.orderMiniUpdate(user_id, order_id, comment, start_day, end_day, payment_for_waiting)
+		await c.message.answer("Ваш заказ отправлен на модерацию", reply_markup = buttons.menu_customer)
+		connection.replacementExecutor(user_id, order_id)
+		connection.orderMiniUpdate(user_id, order_id, comment, start_day, end_day, actual_days)
 
 
 
@@ -394,11 +428,11 @@ def register_order_handlers(dp: Dispatcher):
 
 	dp.register_callback_query_handler(callback_accept, lambda c: c.data.startswith('accept'),  state = '*')	
 
-	dp.register_callback_query_handler(callback_find_new_ex, lambda c: c.data.startswith('find_ex'),  state = '*')	
-	dp.register_callback_query_handler(change_new_order, lambda c: c.data == 'to_change',  state = FindNewEx.step1)	
-	dp.register_message_handler(process_input_start_day, state = FindNewEx.step2)
-	dp.register_message_handler(process_input_end_day, state = FindNewEx.step3)
-	dp.register_callback_query_handler(show_without_comment, lambda c: c.data == 'cSkip', state = FindNewEx.step4)
-	dp.register_message_handler(show_with_comment, state = FindNewEx.step4)
+	# dp.register_callback_query_handler(callback_find_new_ex, lambda c: c.data.startswith('find_ex'),  state = '*')	
+	# dp.register_callback_query_handler(change_new_order, lambda c: c.data == 'to_change',  state = FindNewEx.step1)	
+	# dp.register_message_handler(process_input_start_day, state = FindNewEx.step2)
+	# dp.register_message_handler(process_input_end_day, state = FindNewEx.step3)
+	# dp.register_callback_query_handler(show_without_comment, lambda c: c.data == 'cSkip', state = FindNewEx.step4)
+	# dp.register_message_handler(show_with_comment, state = FindNewEx.step4)
 
-	dp.register_callback_query_handler(callback_publish_new_order, lambda c: c.data == 'to_publish',  state = FindNewEx.step1)	
+	# dp.register_callback_query_handler(callback_publish_new_order, lambda c: c.data == 'to_publish',  state = FindNewEx.step1)	

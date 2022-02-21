@@ -11,7 +11,6 @@ from app.admin import admin_connection
 bot = Bot(token=config.TOKEN, parse_mode = 'html')
 
 
-
 class RegExecutor(StatesGroup):
 	step1 = State()
 	step2 = State()
@@ -19,19 +18,6 @@ class RegExecutor(StatesGroup):
 	step4 = State()
 	step5 = State()
 	step6 = State()
-
-
-
-def checkStatusUser(func):
-	async def wrapper(message: types.Message, state: FSMContext):
-		user_id = message.from_user.id
-		if not connection.checkUserStatus(user_id)[0]:
-			await bot.send_photo(message.chat.id, photo = file_ids.PHOTO['agreement'], caption = "Для использования бота, необходимо ознакомиться с <a href = 'https://ru.wikipedia.org/wiki/%D0%9F%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%D1%81%D0%BA%D0%BE%D0%B5_%D1%81%D0%BE%D0%B3%D0%BB%D0%B0%D1%88%D0%B5%D0%BD%D0%B8%D0%B5'>пользовательским договором</a> и согласиться с ним чтоб продолжить использование бота.", reply_markup = buttons.btn)
-
-		else:
-			return await func(message, state)
-	return wrapper
-
 
 
 async def process_create_executor_profil(c: types.CallbackQuery, state: FSMContext):
@@ -112,8 +98,6 @@ async def process_create4(message: types.Message, state: FSMContext):
 		reply_markup = buttons.yes_no)
 
 
-
-
 async def process_create5(message: types.Message, state: FSMContext):
 	async with state.proxy() as data:
 		data['skill'] = message.text
@@ -127,8 +111,6 @@ async def process_create5(message: types.Message, state: FSMContext):
 		ex_rate = 0
 		date_registration = datetime.datetime.today().strftime('%d.%m.%Y - %H:%M')
 		ex_status = 'free'
-
-
 		
 		if not connection.getExecutorProfil(ex_id):
 			connection.regExecutor(ex_id, ex_name, date_of_birth, ex_pic, ex_contact, ex_skill, ex_rate, date_registration, ex_status)
@@ -184,9 +166,10 @@ async def process_no_skill(c: types.CallbackQuery, state: FSMContext):
 	await state.finish()	
 	
 
-@checkStatusUser
 async def get_geo(message: types.Message, state: FSMContext):
 	ex_id = message.from_user.id
+	connection.checkDeletionDate()
+	
 
 	if connection.checkReferral(ex_id)[3] == 'Banned':
 		await bot.send_message(message.chat.id, "Ваш профиль забанен!")
@@ -198,7 +181,8 @@ async def get_geo(message: types.Message, state: FSMContext):
 		await bot.send_message(message.chat.id, "Ваш профиль исполнителя забанен!")
 
 	elif connection.checkExecutor(ex_id)[8] == 'busy':
-		await bot.send_message(message.chat.id, text = "Вы не можете искать заказы, пока не закончите начатый заказ!")
+		await bot.send_message(message.chat.id, text = "⚠️ <b>Ошибка:</b>\n\n"
+													   "Вы не можете просматривать новые заказы, пока не закончите текущий заказ")
 				
 	else:
 		try:
@@ -214,7 +198,8 @@ async def get_geo(message: types.Message, state: FSMContext):
 				f"<b>Заказчик:</b> <code>{orders[1]}</code>\n"
 				f"<b>Расстояние:</b> <code>{getLocationInfo.calculate_distance(lat, lon, orders[8], orders[9])}</code> от Вас\n\n"
 				f"<b>Должность:</b> <code>{orders[6]}</code>\n"
-				f"<b>Время работы:</b> <code>{orders[4]}</code>\n"
+				f"{connection.checkOrderType(orders[-2], orders)}"
+				# f"<b>Время работы:</b> <code>{orders[4]}</code>\n"
 				f"<b>График:</b> <code>{orders[3]}</code>\n"
 				f"<b>Смена:</b> <code>{orders[5]}</code>\n\n"
 
@@ -236,8 +221,6 @@ async def get_geo(message: types.Message, state: FSMContext):
 				await bot.send_message(message.chat.id, "Заказов не найдено!", reply_markup = buttons.back_to_menu)
 
 
-
-@checkStatusUser
 async def search_orders(message: types.Message, state: FSMContext):
 	ex_id = message.from_user.id	
 	async with state.proxy() as data:
@@ -245,7 +228,8 @@ async def search_orders(message: types.Message, state: FSMContext):
 		data['long'] = message.location.longitude
 
 	if connection.checkExecutor(ex_id)[8] == 'busy':
-		await bot.send_message(message.chat.id, text = "Вы не можете искать заказы, пока не закончите начатый заказ!",
+		await bot.send_message(message.chat.id, text =  "⚠️ <b>Ошибка:</b>\n\n"
+														"Вы не можете просматривать новые заказы, пока не закончите текущий заказ",
 				reply_markup = buttons.menu_executor)
 				
 	else:
@@ -265,7 +249,8 @@ async def search_orders(message: types.Message, state: FSMContext):
 					f"<b>Заказчик:</b> <code>{orders[1]}</code>\n"
 					f"<b>Расстояние:</b> <code>{getLocationInfo.calculate_distance(lat, lon, orders[8], orders[9])}</code> от Вас\n\n"
 					f"<b>Должность:</b> <code>{orders[6]}</code>\n"
-					f"<b>Время работы:</b> <code>{orders[4]}</code>\n"
+					f"{connection.checkOrderType(orders[-2], orders)}"
+					# f"<b>Время работы:</b> <code>{orders[4]}</code>\n"
 					f"<b>График:</b> <code>{orders[3]}</code>\n"
 					f"<b>Смена:</b> <code>{orders[5]}</code>\n\n"
 
@@ -276,12 +261,11 @@ async def search_orders(message: types.Message, state: FSMContext):
 						reply_markup = buttons.globalOrders(orders[0], orders[12]))
 				await bot.send_message(message.chat.id, 'Вот подборочка объявлений для Вас! 🥺', reply_markup = buttons.back_to_menu)
 
-			except:
+			except Exception as e:
+				print(e)
 				await bot.send_message(message.chat.id, "<b>🔔 Уведомление:</b>\n\nВашем регионе не найдены заказы! Загляните к нам позже.", reply_markup = buttons.menu_executor)
 													
 
-
-@checkStatusUser
 async def personal_cabinet(message: types.Message, state: FSMContext):
 	await state.finish()
 	ex_id = message.from_user.id
@@ -317,7 +301,7 @@ def register_reg_executor_profil_handlers(dp: Dispatcher):
 	dp.register_message_handler(process_create1, state = RegExecutor.step1)
 	dp.register_message_handler(process_create2, state = RegExecutor.step2)
 	dp.register_message_handler(process_create3, content_types = ['photo', 'video'], state = RegExecutor.step3)
-	dp.register_message_handler(process_contact_invalid, lambda message: not message.contact, is_sender_contact = False, state = RegExecutor.step4)
+	dp.register_message_handler(process_contact_invalid, state = RegExecutor.step4)
 	dp.register_message_handler(process_create4, content_types = 'contact', is_sender_contact = True, state = RegExecutor.step4)
 	dp.register_message_handler(process_create5, state = RegExecutor.step5)
 

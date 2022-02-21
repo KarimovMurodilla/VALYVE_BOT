@@ -1,7 +1,10 @@
 import asyncio
 import logging
+import datetime
 
-from aiogram import Bot, Dispatcher
+from regular_check import scheduler, schedule_jobs
+
+from aiogram import Bot, Dispatcher, executor
 from aiogram.types import BotCommand
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
@@ -31,7 +34,6 @@ from app.admin.bank_control import register_bank_controls
 from app.filters.filter import register_filter_handlers
 
 
-
 async def set_commands(bot: Bot):
     commands = [
         BotCommand(command="/start", description="Начать")
@@ -39,12 +41,8 @@ async def set_commands(bot: Bot):
     await bot.set_my_commands(commands)
 
 
-async def main():
+async def main(dp):
 	logging.basicConfig(level=logging.INFO)
-
-	storage = MemoryStorage()
-	bot = Bot(token=TOKEN, parse_mode = 'html')
-	dp = Dispatcher(bot, storage = storage)
 
 	register_handlers_common(dp)
 	register_start_reg_handlers(dp)	
@@ -69,12 +67,17 @@ async def main():
 	
 	register_filter_handlers(dp)
 
+	schedule_jobs()
 
 	await set_commands(bot)
 
 	await dp.start_polling()
 
 
-
 if __name__ == '__main__':
-	asyncio.run(main())
+	bot = Bot(token=TOKEN, parse_mode = 'html')
+	storage = MemoryStorage()
+	dp = Dispatcher(bot, storage = storage)
+	scheduler.start()
+	executor.start_polling(dp, on_startup = main)
+

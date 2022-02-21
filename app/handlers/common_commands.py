@@ -40,7 +40,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
                                                     f"<b>Адреc:</b> <code>{all_data[2]}</code>\n\n"
                                                     
                                                     f"<b>Должность:</b> <code>{all_data[6]}</code>\n"
-                                                    f"<b>Время работы:</b> <code>{all_data[4]}</code>\n"
+                                                    f"{connection.checkOrderType(all_data[-2], all_data)}\n"
                                                     f"<b>График:</b> <code>{all_data[3]}</code>\n"
                                                     f"<b>Смена:</b> <code>{all_data[5]}</code>\n\n"
 
@@ -91,7 +91,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
                     
                 
                     
-                    os.system(f"del -y {config.CAPTCHA_PHOTO_PATH}{cap}.png")
+                    os.system(f"unlink {config.CAPTCHA_PHOTO_PATH}{cap}.png")
                     await Start.step1.set()
 
         else:
@@ -145,7 +145,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
                     
                 
                         
-                        os.system(f"del -y {config.CAPTCHA_PHOTO_PATH}{cap}.png")
+                        os.system(f"unlink {config.CAPTCHA_PHOTO_PATH}{cap}.png")
                         await Start.step1.set()
 
 

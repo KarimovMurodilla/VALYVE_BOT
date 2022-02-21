@@ -356,7 +356,7 @@ async def process_unban(message: types.Message, state: FSMContext):
 
 async def callback_payment(c: types.CallbackQuery, state: FSMContext):
 	if admin_connection.selectFromAdminTable()[1][1] == '🟢':
-		admin_connection.changeAdminTable('🔴', 'BOT_PAYMENT')
+		admin_connection.changeAdminTable('🔴', 'WITHDRAW')
 		await bot.edit_message_reply_markup(
 			chat_id = c.from_user.id, 
 				message_id = c.message.message_id,
@@ -369,7 +369,7 @@ async def callback_payment(c: types.CallbackQuery, state: FSMContext):
 
 
 	elif admin_connection.selectFromAdminTable()[1][1] == '🔴':
-		admin_connection.changeAdminTable('🟢', 'BOT_PAYMENT')
+		admin_connection.changeAdminTable('🟢', 'WITHDRAW')
 		await bot.edit_message_reply_markup(
 			chat_id = c.from_user.id, 
 				message_id = c.message.message_id,
@@ -392,7 +392,7 @@ async def callback_order_feed(c: types.CallbackQuery, state: FSMContext):
 							sensor2 = admin_connection.selectFromAdminTable()[0][1],  
 								sensor3= admin_connection.selectFromAdminTable()[2][1],  
 									sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
-		await message.answer("Лента заказов отключено ✖️")
+		await c.answer("Лента заказов отключено ✖️")
 
 
 	elif admin_connection.selectFromAdminTable()[0][1] == '🔴':
@@ -405,7 +405,7 @@ async def callback_order_feed(c: types.CallbackQuery, state: FSMContext):
 							sensor2 = admin_connection.selectFromAdminTable()[0][1],  
 								sensor3= admin_connection.selectFromAdminTable()[2][1],  
 									sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
-		await message.answer("Лента заказов включено ✅")
+		await c.answer("Лента заказов включено ✅")
 
 
 async def callback_replenishment(c: types.CallbackQuery, state: FSMContext):
@@ -419,7 +419,7 @@ async def callback_replenishment(c: types.CallbackQuery, state: FSMContext):
 							sensor2 = admin_connection.selectFromAdminTable()[0][1],  
 								sensor3= admin_connection.selectFromAdminTable()[2][1],  
 									sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
-		await message.answer("Пополнение отключено ✖️")
+		await c.answer("Пополнение отключено ✖️")
 
 
 	elif admin_connection.selectFromAdminTable()[3][1] == '🔴':
@@ -432,7 +432,7 @@ async def callback_replenishment(c: types.CallbackQuery, state: FSMContext):
 							sensor2 = admin_connection.selectFromAdminTable()[0][1],  
 								sensor3= admin_connection.selectFromAdminTable()[2][1],  
 									sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
-		await message.answer("Пополнение включено ✅")		
+		await c.answer("Пополнение включено ✅")		
 
 
 async def callback_ads(c: types.CallbackQuery, state: FSMContext):
@@ -446,7 +446,7 @@ async def callback_ads(c: types.CallbackQuery, state: FSMContext):
 							sensor2 = admin_connection.selectFromAdminTable()[0][1],  
 								sensor3= admin_connection.selectFromAdminTable()[2][1],  
 									sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
-		await message.answer("Объявление отключено ✖️")
+		await c.answer("Объявление отключено ✖️")
 
 
 	elif admin_connection.selectFromAdminTable()[2][1] == '🔴':
@@ -459,7 +459,7 @@ async def callback_ads(c: types.CallbackQuery, state: FSMContext):
 							sensor2 = admin_connection.selectFromAdminTable()[0][1],  
 								sensor3= admin_connection.selectFromAdminTable()[2][1],  
 									sensor4 = admin_connection.selectFromAdminTable()[3][1])[0])
-		await message.answer("Объявление включено ✅")		
+		await c.answer("Объявление включено ✅")		
 
 
 def register_admin_consol_handlers(dp: Dispatcher):

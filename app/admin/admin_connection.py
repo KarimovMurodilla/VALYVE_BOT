@@ -41,6 +41,17 @@ def selectOrdersWhereInModeration():
 	sowim = cur.execute("SELECT * FROM orders WHERE order_status = 'На модерации' OR order_status = 'Пересмотр'").fetchall()
 	return sowim
 
+
+def selectOrderPrice():
+	sowim = cur.execute("SELECT deletion_date FROM orders WHERE order_status = 'На модерации'").fetchall()
+	return sowim
+
+
+def selectWaitingPayments():
+	response = cur.execute("SELECT payment_for_waiting, actual_days FROM orders WHERE order_type = 'stock'").fetchall()
+	return response
+
+
 # ----------ADMIN_TABLE--------
 def changeAdminTable(status, name):
 	cur2.execute("UPDATE admin_table SET status = ? WHERE name = ?", (status, name,))
@@ -103,9 +114,19 @@ def addUserComplaint(user_id, complaint):
 
 
 # ----BANK CONTROL TABLE----
-def selectIcOneTime():
-	siot = cur2.execute("SELECT * FROM bank_control_table WHERE ic_one_time").fetchall()
-	return siot
+def selectIcs(order_type, rowid):
+	if order_type == 'ic_stock':
+		sic = cur2.execute("SELECT ic_stock FROM bank_control_table WHERE rowid = ?", (rowid,)).fetchone()
+		return sic
+
+	else:
+		siot = cur2.execute("SELECT ic_one_time FROM bank_control_table WHERE rowid = ?", (rowid,)).fetchone()
+		return siot		
+
+
+def updateIcStock(ic_stock, rowid):
+	cur2.execute("UPDATE bank_control_table SET ic_stock = ? WHERE rowid = ?", (ic_stock, rowid,))
+	con2.commit()
 
 
 def updateIcOneTime(ic_one_time, rowid):
@@ -124,7 +145,7 @@ def deleteComplaintForReview(ex_id, cus_id, order_id):
 	con2.commit()
 
 
-# ----COMPLAINT FOR REVIEW----
+# ----COMPLAINT FOR USER----
 def getComplaintsFromUser():
 	result = cur2.execute("SELECT *, rowid FROM complaints_for_user").fetchall()
 	return result
@@ -141,15 +162,57 @@ def addView(column_name: str, date_view: str):
 	con2.commit()
 
 
-def getViews(column_name: str, date_today: str):
+def getViews(column_name: str):
+	today = datetime.datetime.today()
+	one_day = today - datetime.timedelta(days=1)
+
 	if column_name == 'ads':
-		result = cur2.execute("SELECT ads FROM views WHERE date_view = ?", (date_today,)).fetchall()
+		result = cur2.execute(f"SELECT ads FROM views WHERE date_view BETWEEN \'{one_day}\' AND \'{today}\'").fetchall()
 		return result
 
 	elif column_name == 'profils':
-		result = cur2.execute("SELECT profils FROM views WHERE date_view = ?", (date_today,)).fetchall()
+		result = cur2.execute(f"SELECT profils FROM views WHERE date_view BETWEEN \'{one_day}\' AND \'{today}\'").fetchall()
 		return result
 
 	elif column_name == 'complaints':
-		result = cur2.execute("SELECT complaints FROM views WHERE date_view = ?", (date_today,)).fetchall()
+		result = cur2.execute(f"SELECT complaints FROM views WHERE date_view BETWEEN \'{one_day}\' AND \'{today}\'").fetchall()
 		return result
+
+
+# ----GET PAYMENTS----
+def getStatPayment(column_name, interval, interval2):
+	if column_name == 'user_payment':
+		response = cur.execute("SELECT user_payment FROM payments WHERE date_of_payment BETWEEN ? AND ?", (interval, interval2,)).fetchall()
+		return response
+
+	elif column_name == 'bot_payment':
+		response = cur.execute("SELECT bot_payment FROM payments WHERE date_of_payment BETWEEN ? AND ?", (interval, interval2,)).fetchall()
+		return response		
+
+	elif column_name == 'profit':
+		response = cur.execute("SELECT user_payment FROM payments WHERE title = 'profit' AND date_of_payment BETWEEN ? AND ?", (interval, interval2,)).fetchall()
+		return response
+
+	elif column_name == 'top_up':
+		response = cur.execute("SELECT user_payment FROM payments WHERE title = 'top_up' AND date_of_payment BETWEEN ? AND ?", (interval, interval2,)).fetchall()
+		return response
+
+	elif column_name == 'withdraw':
+		response = cur.execute("SELECT bot_payment FROM payments WHERE title = 'withdraw' AND date_of_payment BETWEEN ? AND ?", (interval, interval2,)).fetchall()
+		return response
+
+	elif column_name == 'bank':
+		response = cur.execute("SELECT user_payment FROM payments WHERE title = 'profit' OR title = 'admin_withdraw'").fetchall()
+		return response		
+
+	elif column_name == 'refferal':
+		response = cur.execute("SELECT bot_payment FROM payments WHERE title = 'refferal'").fetchall()
+		return response
+
+	elif column_name == 'payment_for_waiting':
+		response = cur.execute("SELECT user_payment FROM payments WHERE title = 'payment_for_waiting'").fetchall()
+		return response
+
+	elif column_name == 'to_order':
+		response = cur.execute("SELECT user_payment FROM payments WHERE title = 'to_order' AND date_of_payment BETWEEN ? AND ?", (interval, interval2,)).fetchall()
+		return response	

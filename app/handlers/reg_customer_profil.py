@@ -18,24 +18,6 @@ class RegCustomer(StatesGroup):
 	step4 = State()
 
 
-
-def checkStatusUser(func):
-	async def wrapper(message: types.Message, state: FSMContext):
-		user_id = message.from_user.id
-		try:
-			if not connection.checkUserStatus(user_id)[0]:
-				await bot.send_photo(message.chat.id, photo = file_ids.PHOTO['agreement'], caption = "Для использования бота, необходимо ознакомиться с <a href = 'https://ru.wikipedia.org/wiki/%D0%9F%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%D1%81%D0%BA%D0%BE%D0%B5_%D1%81%D0%BE%D0%B3%D0%BB%D0%B0%D1%88%D0%B5%D0%BD%D0%B8%D0%B5'>пользовательским договором</a> и согласиться с ним чтоб продолжить использование бота.", reply_markup = buttons.btn)
-
-			else:
-				return await func(message, state)
-
-		except TypeError:
-			await bot.send_photo(message.chat.id, photo = file_ids.PHOTO['agreement'], caption = "Для использования бота, необходимо ознакомиться с <a href = 'https://ru.wikipedia.org/wiki/%D0%9F%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%D1%81%D0%BA%D0%BE%D0%B5_%D1%81%D0%BE%D0%B3%D0%BB%D0%B0%D1%88%D0%B5%D0%BD%D0%B8%D0%B5'>пользовательским договором</a> и согласиться с ним чтоб продолжить использование бота.", reply_markup = buttons.btn)
-
-	return wrapper
-
-
-
 async def process_set_reg_state(c: types.CallbackQuery, state: FSMContext):
 	await RegCustomer.step1.set()
 	await bot.delete_message(c.message.chat.id, c.message.message_id)
@@ -145,7 +127,6 @@ async def process_no_img(c: types.CallbackQuery, state: FSMContext):
 		reply_markup = buttons.contact)
 	
 
-@checkStatusUser
 async def my_orders(message: types.Message, state: FSMContext):
 	cus_id = message.from_user.id
 	
@@ -164,7 +145,6 @@ async def my_orders(message: types.Message, state: FSMContext):
 			await bot.send_message(message.chat.id, "Вы хотите просмотреть свои заказы или создать новый заказ?", reply_markup = buttons.get_orders(cus_id))
 
 
-@checkStatusUser
 async def my_cab(message: types.Message, state: FSMContext):
 	cus_id = message.from_user.id
 
@@ -179,7 +159,6 @@ async def my_cab(message: types.Message, state: FSMContext):
 		await bot.send_photo(message.chat.id, photo = alldata[1], caption = f'<b>{alldata[0]}</b>\n <b>Номер:</b> <code>+{alldata[2]}</code>', reply_markup = buttons.edit_profil)
 
 
-@checkStatusUser
 async def info(message: types.Message, state: FSMContext):
 	cus_id = message.from_user.id
 

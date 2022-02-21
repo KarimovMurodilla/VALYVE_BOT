@@ -16,18 +16,19 @@ async def query_ads_history(query: types.InlineQuery):
 	try:
 		r = [types.InlineQueryResultArticle( 
 				id = f'{n}', 
-				title = f'Заказ #{n+1} | {item[n][10]}', 
+				title = f'Заказ #{n+1} | {item[n][10][:-7]}', 
 				input_message_content = types.InputTextMessageContent(
 				message_text =  f"<b>Статус заказа:</b> <code>{item[n][11]}</code>\n\n"
 								f"<b>Заказчик:</b> <code>{item[n][1]}</code>\n"
 								f"<b>Адреc:</b> <code>{item[n][2]}</code>\n\n"
 
 								f"<b>График:</b> <code>{item[n][3]}</code>\n"
-								f"<b>Время работы:</b> <code>{item[n][4]}</code>\n"
+								f"{connection.checkOrderType(item[n][-2], item[n])}"
+								# f"<b>Время работы:</b> <code>{item[n][4]}</code>\n"
 								f"<b>Ставка:</b> <code>{item[n][5]}</code>\n"
 								f"<b>Должность:</b> <code>{item[n][6]}</code>\n\n"
 
-								f"<b>Комментарий:</b>\n{item[n][7]}"))
+								f"{item[n][7]}"))
 										for n in range(len(item))]
 			
 
@@ -54,7 +55,8 @@ async def query_work_history(query: types.InlineQuery):
 
 							f"<b>Кол-в исполнителей:</b> <code>{len(connection.selectMyPerWhereOrderId(item[n][2], item[n][3]))}</code>\n"
 							f"<b>График:</b> <code>{connection.selectOrderWhereCusId(item[n][2], item[n][3])[3]}</code>\n"
-							f"<b>Время работы:</b> <code>{connection.selectOrderWhereCusId(item[n][2], item[n][3])[4]}</code>\n"
+                            f"{connection.checkOrderType(connection.selectOrderWhereCusId(item[n][0], item[n][1])[-2], connection.selectOrderWhereCusId(item[n][0], item[n][1]))}"
+							# f"<b>Время работы:</b> <code>{connection.selectOrderWhereCusId(item[n][2], item[n][3])[4]}</code>\n"
 							f"<b>Ставка:</b> <code>{connection.selectOrderWhereCusId(item[n][2], item[n][3])[5]}</code>\n"
 							f"<b>Должность:</b> <code>{connection.selectOrderWhereCusId(item[n][2], item[n][3])[6]}</code>\n\n"
 

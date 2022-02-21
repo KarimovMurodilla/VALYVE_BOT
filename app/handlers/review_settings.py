@@ -200,7 +200,11 @@ async def send_complaint_to_admin(c: types.CallbackQuery, state: FSMContext):
 
 		admin_connection.addUserComplaint(ex_id, complaint)
 		await c.message.delete()
-		await c.message.answer("Ваше жалоба отправлена на модерции")
+		await c.message.answer(
+			"🔔 <b>Уведомление:</b>\n\n"
+
+			"Благодарим за помощь, Ваш отчёт был отправлен на модерацию."
+			)
 
 		await state.finish()
 		

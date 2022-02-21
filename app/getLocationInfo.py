@@ -18,8 +18,6 @@ def location_info(coords):
 		print(e)
 
 
-
-
 def calculate_km(latitude, longitude, latitude2, longitude2):
 	distance_in_km = geodesic((latitude, longitude), (latitude2, longitude2)).km
 	km = str(distance_in_km).split('.')

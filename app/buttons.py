@@ -136,9 +136,19 @@ def get_orders(chat_id, just_inline = False):
 
 	return orders
 
-def get_create_order():
+
+def order_type_btns():
+	typeBtns = types.InlineKeyboardMarkup()
+	on_time = types.InlineKeyboardButton(text = "Разовой", callback_data = 'on_time')
+	stock = types.InlineKeyboardButton(text = "Запас", callback_data = 'stock')
+	typeBtns.add(on_time, stock)
+
+	return typeBtns
+
+
+def get_understand():
 	createBtn = types.InlineKeyboardMarkup()
-	create = types.InlineKeyboardButton(text = "Я ознакомлен(а) с правилами", callback_data = 'create')
+	create = types.InlineKeyboardButton(text = "Я ознакомлен(а) с правилами", callback_data = 'ok_understand')
 	createBtn.add(create)
 
 	return createBtn
@@ -164,7 +174,7 @@ def yesNo():
 	return yes_no
 
 
-def yesNope(cus_id, order_id):
+def yesNope(order_id):
 	yes_no = types.InlineKeyboardMarkup(row_width = 2)
 	yes = types.InlineKeyboardButton(text = "Да", callback_data = f'da {order_id}')
 	net = types.InlineKeyboardButton(text = "Нет", callback_data = 'net')
@@ -226,29 +236,36 @@ def realOrNot2(cus_id, ex_id, rate, order_id):
 	return ron
 
 # ------BUTTONS WITH FUNCTIONS------
-def orderButtons(order_id):
+def orderButtons(order_id, order_type):
 	order_buttons = types.InlineKeyboardMarkup(row_width = 2)
 	complete_order = types.InlineKeyboardButton(text = 'Завершить', callback_data = f'complete_order {order_id}')
 	request_order = types.InlineKeyboardButton(text = 'Заявки', switch_inline_query_current_chat = f'!my_requests {order_id}')
 	call_to_per = types.InlineKeyboardButton(text = 'Вызвать исполнителя', callback_data = f'call_to_per {order_id}')
 	my_performs = types.InlineKeyboardButton(text = 'Мои исполнители', switch_inline_query_current_chat = f'!my_performers {order_id}')
 	my_pendings = types.InlineKeyboardButton(text = "На рассмотрении", switch_inline_query_current_chat = f'!my_pendings {order_id}')
-	order_buttons.add(complete_order, request_order)
-	order_buttons.add(call_to_per)
-	order_buttons.add(my_performs)
-	order_buttons.add(my_pendings)
+
+	if order_type == 'stock':
+		order_buttons.add(complete_order, request_order)
+		order_buttons.add(call_to_per)
+		order_buttons.add(my_performs)
+		order_buttons.add(my_pendings)
+
+	else:
+		order_buttons.add(complete_order, request_order)
+		order_buttons.add(my_performs)
+		order_buttons.add(my_pendings)		
 
 	return order_buttons
 
 
 def get_works(chat_id):
 	profil_settings = types.InlineKeyboardMarkup(row_width = 1)
+	under_consideration = types.InlineKeyboardButton(text = "На рассмотрении", switch_inline_query_current_chat = f'!under_consideration {chat_id}')
 	recent_works = types.InlineKeyboardButton(text = 'История работы', switch_inline_query_current_chat = f"!recent_works {chat_id}")
 	edit_ex = types.InlineKeyboardButton(text = 'Ред.профиль', callback_data = 'edit_ex')
 	my_reviews = types.InlineKeyboardButton(text = 'Мои отзывы', switch_inline_query_current_chat = f"!reviews {chat_id}")
-	under_consideration = types.InlineKeyboardButton(text = "На рассмотрении", switch_inline_query_current_chat = f'!under_consideration {chat_id}')
 
-	profil_settings.add(recent_works, edit_ex, my_reviews, under_consideration)
+	profil_settings.add(under_consideration, recent_works, edit_ex, my_reviews)
 
 	return profil_settings
 
@@ -300,12 +317,20 @@ def endOrder(cus_id, order_id):
 
 	return end_order
 
-def menuPrice(total_1, total_2, total_3):
-	prices = types.InlineKeyboardMarkup()
-	price_1 = types.InlineKeyboardButton(text = '1️⃣', callback_data = f'price 30,{total_1}')
-	price_2 = types.InlineKeyboardButton(text = '2️⃣', callback_data = f'price 90,{total_2}')
-	price_3 = types.InlineKeyboardButton(text = '3️⃣', callback_data = f'price 180,{total_3}')
-	prices.add(price_1, price_2, price_3)	
+def menuPrice(total_1, total_2, total_3, is_stock = True):
+	if is_stock:
+		prices = types.InlineKeyboardMarkup()
+		price_1 = types.InlineKeyboardButton(text = '1️⃣', callback_data = f'price 30,{total_1}')
+		price_2 = types.InlineKeyboardButton(text = '2️⃣', callback_data = f'price 90,{total_2}')
+		price_3 = types.InlineKeyboardButton(text = '3️⃣', callback_data = f'price 180,{total_3}')
+		prices.add(price_1, price_2, price_3)	
+
+	else:
+		prices = types.InlineKeyboardMarkup()
+		price_1 = types.InlineKeyboardButton(text = '1️⃣', callback_data = f'price 3,{total_1}')
+		price_2 = types.InlineKeyboardButton(text = '2️⃣', callback_data = f'price 7,{total_2}')
+		price_3 = types.InlineKeyboardButton(text = '3️⃣', callback_data = f'price 30,{total_3}')
+		prices.add(price_1, price_2, price_3)	
 	
 	return prices
 
@@ -313,7 +338,7 @@ def menuPrice(total_1, total_2, total_3):
 def showPayment(bill_id, url, price):
 	menu_payment = types.InlineKeyboardMarkup(row_width=2)
 	link_to_pay = types.InlineKeyboardButton(text = "Оплатить", url = url)
-	check_payment = types.InlineKeyboardButton(text = "Обновить", callback_data = f"check_{bill_id},{price}")
+	check_payment = types.InlineKeyboardButton(text = "Проверить", callback_data = f"check_{bill_id},{price}")
 	menu_payment.add(link_to_pay, check_payment)
 
 	return menu_payment
@@ -398,9 +423,11 @@ def executor_choice(cus_id, order_id, start_day, end_day):
 	return answer_btns
 
 
-def findNewEx(order_id, start_day, end_day):
+def findNewEx():
 	find_btn = types.InlineKeyboardMarkup()
-	find_ex = types.InlineKeyboardButton(text = "Найти другого исполнителя", callback_data = f'find_ex {order_id},{start_day},{end_day}')
+	find_ex = types.InlineKeyboardButton(text = "Найти другого исполнителя", callback_data = 'on_time')
+	# order_id, start_day, end_day
+	# find_ex = types.InlineKeyboardButton(text = "Найти другого исполнителя", callback_data = f'find_ex {order_id},{start_day},{end_day}')
 	find_btn.add(find_ex)
 
 	return find_btn
@@ -427,13 +454,13 @@ def getPayCpnsBtn():
 def getUnderConsiderationBtns(cus_id, order_id, again_reply = False):
 	con_btns = types.InlineKeyboardMarkup()
 	end = types.InlineKeyboardButton(text = "Завершить", callback_data = f'con_finish {cus_id},{order_id}')
-	write_to_cus = types.InlineKeyboardButton(text = "Написать", callback_data = f'write_to_cus {cus_id}')
+	# write_to_cus = types.InlineKeyboardButton(text = "Написать", callback_data = f'write_to_cus {cus_id}')
 	
-	if again_reply:
-		con_btns.add(write_to_cus)
+	# if again_reply:
+	# 	con_btns.add(write_to_cus)
 
-	else:
-		con_btns.add(end, write_to_cus)
+	# else:
+	con_btns.add(end)
 
 	return con_btns
 
@@ -452,3 +479,12 @@ def leaveChat():
 	btn.add(leave)
 
 	return btn
+
+
+def askPutRate(user_id, order_id):
+	reply = types.InlineKeyboardMarkup()
+	call_rate = types.InlineKeyboardButton(text = "Оценить", callback_data = f'ask_rate {user_id},{order_id}')
+	call_no = types.InlineKeyboardButton(text = "Нет", callback_data = f'call_no {user_id},{order_id}')
+	reply.add(call_rate, call_no)
+
+	return reply

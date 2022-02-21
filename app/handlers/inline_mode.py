@@ -8,21 +8,40 @@ from .. import connection, file_ids, buttons, config
 bot = Bot(token=config.TOKEN, parse_mode = 'html')
 
 
+def showDateOrder(date: str, order_status):
+	if order_status == 'Опубликован':
+		date = [int(i) for i in str(date).split(',')]
+		
+		result = datetime.datetime(date[0], date[1], date[2], date[3], date[4]) - datetime.datetime.today()
+
+		days, seconds = result.days, result.seconds 
+
+		hours = seconds // 3600
+		minutes = (seconds % 3600) // 60 
+		seconds = seconds % 60
+
+		return f'{days}д.{hours}ч.{minutes}м'
+
+	else:
+		return ' '
+
+
 # ----FOR ORDERS----
 async def my_orders(query: types.InlineQuery):
+	connection.checkDeletionDate()
 	item = connection.selectOrders(query.from_user.id)
 	
 	try:
 		r = [types.InlineQueryResultArticle( 
 				id = f'{n}', 
-				title = f'Заказ #{n+1} | {item[n][10]}', 
+				title = f'Заказ #{n+1} | {item[n][10][:-7]}', 
 				input_message_content = types.InputTextMessageContent(
-				message_text =  f"<b>Статус заказа:</b> <code>{item[n][11]}</code>\n\n"
+				message_text =  f"<b>Статус заказа:</b> <code>{item[n][11]}</code> <code>{showDateOrder(item[n][-6], item[n][-8])}</code>\n\n"
 								f"<b>Заказчик:</b> <code>{item[n][1]}</code>\n"
 								f"<b>Адреc:</b> <code>{item[n][2]}</code>\n\n"
 
                                 f"<b>Должность:</b> <code>{item[n][6]}</code>\n"
-                                f"<b>Время работы:</b> <code>{item[n][4]}</code>\n"
+                                f"{connection.checkOrderType(item[n][-2], item[n])}"
                                 f"<b>График:</b> <code>{item[n][3]}</code>\n"
                                 f"<b>Смена:</b> <code>{item[n][5]}</code>\n\n"
 
@@ -30,10 +49,10 @@ async def my_orders(query: types.InlineQuery):
                                 f"<b>Обязанности:</b>\n<code>{item[n][15]}</code>\n\n"
                           
                                 f"{item[n][7]}"), 
-									reply_markup = buttons.orderButtons(n))
+									reply_markup = buttons.orderButtons(n, item[n][-2]))
 										for n in range(len(item))]
 			
-		await query.answer(r, cache_time = 60)
+		await query.answer(r, cache_time = 1)
 		
 	except Exception as e:
 		print(e)
@@ -109,7 +128,7 @@ async def my_pendings(query: types.InlineQuery):
 async def query_reviews(query: types.InlineQuery):
 	user_id = query.from_user.id
 	ex_id = query.query[8:]
-	item = connection.selectReviews(ex_id)
+	item = connection.selectReviews(ex_id, for_history = False)
 
 	try:
 		my_performers = [types.InlineQueryResultArticle( 
@@ -140,14 +159,15 @@ async def recent_works(query: types.InlineQuery):
 	try:
 		recent = [types.InlineQueryResultArticle( 
 			id = f'{n}', 
-			title = f'Заказ#{n+1} | {connection.selectOrderWhereCusId(item[n][2], item[n][3])[10]}', 
+			title = f'Заказ#{n+1} | {connection.selectOrderWhereCusId(item[n][2], item[n][3])[10][:-7]}', 
 			input_message_content = types.InputTextMessageContent(
 			message_text =  f"<b>Заказчик:</b> <code>{connection.selectOrderWhereCusId(item[n][2], item[n][3])[1]}</code>\n"
 							f"<b>Номер:</b> <code>+{connection.selectAll(item[n][2])[2]}</code>\n"
 							f"<b>Адреc:</b> <code>{connection.selectOrderWhereCusId(item[n][2], item[n][3])[2]}</code>\n\n"
 
                             f"<b>Должность:</b> <code>{connection.selectOrderWhereCusId(item[n][2], item[n][3])[6]}</code>\n"
-                            f"<b>Время работы:</b> <code>{connection.selectOrderWhereCusId(item[n][2], item[n][3])[4]}</code>\n"
+                            f"{connection.checkOrderType(connection.selectOrderWhereCusId(item[n][2], item[n][3])[-2], connection.selectOrderWhereCusId(item[n][2], item[n][3]))}"
+                            # f"<b>Время работы:</b> <code>{connection.selectOrderWhereCusId(item[n][2], item[n][3])[4]}</code>\n"
                             f"<b>График:</b> <code>{connection.selectOrderWhereCusId(item[n][2], item[n][3])[3]}</code>\n"
                             f"<b>Смена:</b> <code>{connection.selectOrderWhereCusId(item[n][2], item[n][3])[5]}</code>\n\n"
 
@@ -169,14 +189,15 @@ async def my_considerations(query: types.InlineQuery):
 	try:
 		recent = [types.InlineQueryResultArticle( 
 			id = f'{n}', 
-			title = f'Заказ#{n+1} | {connection.selectOrderWhereCusId(item[n][0], item[n][1])[10]}', 
+			title = f'Заказ#{n+1} | {connection.selectOrderWhereCusId(item[n][0], item[n][1])[10][:-7]}', 
 			input_message_content = types.InputTextMessageContent(
 			message_text =  f"<b>Заказчик:</b> <code>{connection.selectOrderWhereCusId(item[n][0], item[n][1])[1]}</code>\n"
 							f"<b>Номер:</b> <code>+{connection.selectAll(item[n][0])[2]}</code>\n"
 							f"<b>Адреc:</b> <code>{connection.selectOrderWhereCusId(item[n][0], item[n][1])[2]}</code>\n\n"
 
                             f"<b>Должность:</b> <code>{connection.selectOrderWhereCusId(item[n][0], item[n][1])[6]}</code>\n"
-                            f"<b>Время работы:</b> <code>{connection.selectOrderWhereCusId(item[n][0], item[n][1])[4]}</code>\n"
+                            f"{connection.checkOrderType(connection.selectOrderWhereCusId(item[n][0], item[n][1])[-2], connection.selectOrderWhereCusId(item[n][0], item[n][1]))}"
+                            # f"<b>Время работы:</b> <code>{connection.selectOrderWhereCusId(item[n][0], item[n][1])[4]}</code>\n"
                             f"<b>График:</b> <code>{connection.selectOrderWhereCusId(item[n][0], item[n][1])[3]}</code>\n"
                             f"<b>Смена:</b> <code>{connection.selectOrderWhereCusId(item[n][0], item[n][1])[5]}</code>\n\n"
 
@@ -187,7 +208,7 @@ async def my_considerations(query: types.InlineQuery):
 								reply_markup = buttons.getUnderConsiderationBtns(item[n][0], item[n][1]))
 									for n in range(len(item))]
 
-		await query.answer(recent, cache_time=60, is_personal=True)
+		await query.answer(recent, cache_time=1, is_personal=True)
 	except Exception as e:
 		print(e)
 
@@ -210,6 +231,5 @@ def register_inline_mode_handlers(dp: Dispatcher):
 
 	dp.register_inline_handler(recent_works, lambda query: query.query.startswith("!recent_works"), state = '*')
 	dp.register_inline_handler(my_considerations, lambda query: query.query.startswith("!under_consideration"), state = '*')
-
 
 	dp.register_message_handler(get_msg_id, lambda message: message.text.startswith("Вы хотите просмотреть профиль"), state = '*')

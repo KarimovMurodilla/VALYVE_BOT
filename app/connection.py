@@ -25,7 +25,7 @@ def addReferral(user_id: str):
 
 
 def addActiveReferral(user_id: str):
-	cur.execute("UPDATE users SET user_referral = user_referral-1, active_referrals = active_referrals+1, user_balance = user_balance+0.5 WHERE user_id = ?", (user_id,))
+	cur.execute("UPDATE users SET user_referral = user_referral-1, active_referrals = active_referrals+1 WHERE user_id = ?", (user_id,))
 	con.commit()
 
 
@@ -42,6 +42,11 @@ def getRefActives(refferal_status: str):
 def selectStatRefferal(from_id, status, interval, interval2):
 	response = cur.execute("SELECT count(user_id) FROM users WHERE from_id = ? AND refferal_status = ? AND date_start BETWEEN ? AND ?", (from_id, status, interval, interval2,)).fetchall()
 	return response[0]
+
+
+def getMyFromId(user_id):
+	response = cur.execute("SELECT refferal_status FROM users WHERE user_id = ?", (user_id,)).fetchone()
+	return response[0]	
 
 
 # -------All bot users------
@@ -81,14 +86,18 @@ def backPagination(user_id: str):
 	con.commit()
 
 
-def updateBalance(user_id: str, new_balance: int, status: str):
+def updateBalance(user_id: str, new_balance: int, status: str, payment_status = False, cus_id = None, order_id = None):
 	if status == '+':
 		cur.execute(f"UPDATE users SET user_balance = user_balance+\'{new_balance}\' WHERE user_id = ?", (user_id,))
 		con.commit()
 
-	else:
+	elif status == '-':
 		cur.execute(f"UPDATE users SET user_balance = user_balance-\'{new_balance}\' WHERE user_id = ?", (user_id,))
 		con.commit()
+
+	if payment_status:
+		addBotPayment(user_id, 'payment_for_waiting', new_balance, datetime.datetime.today())
+		updateFreezingMoney(new_balance, cus_id, order_id)
 
 
 
@@ -130,13 +139,13 @@ def UpdateCusStatus(cus_id: str, cus_status: str):
 # -----------------FOR ORDERS-----------------
 def createNewOrder(cus_id: str, cus_name: str, cus_adress: str, cus_work_graphic: str, cus_work_day: str, 
 	cus_bid: str, cus_position: str, cus_comment: str, cus_lat: str, cus_long: str, date_order: str, 
-	order_status: str, order_id: int, deletion_date: str, requirements: str, respons: str, actual_days: str, payment_for_waiting: str):
+	order_status: str, order_id: int, deletion_date: str, requirements: str, respons: str, actual_days: str, order_type, payment_for_waiting: str):
 
 	cur.execute("""INSERT INTO orders (cus_id, cus_name, cus_adress, cus_work_graphic, cus_work_day, cus_bid, cus_position, 
-				cus_comment, cus_lat, cus_long, date_order, order_status, order_id, deletion_date, requirements, respons, actual_days, payment_for_waiting)
-					VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (cus_id, cus_name, cus_adress, cus_work_graphic, 
+				cus_comment, cus_lat, cus_long, date_order, order_status, order_id, deletion_date, requirements, respons, actual_days, order_type, payment_for_waiting)
+					VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (cus_id, cus_name, cus_adress, cus_work_graphic, 
 						cus_work_day, cus_bid, cus_position, cus_comment, cus_lat, cus_long, date_order, order_status, 
-						order_id, deletion_date, requirements, respons, actual_days, payment_for_waiting,))
+						order_id, deletion_date, requirements, respons, actual_days, order_type, payment_for_waiting,))
 	con.commit()
 
 
@@ -146,29 +155,61 @@ def selectOrders(cus_id: str):
 
 
 def selectAllOrders(cus_lat, cus_long):
-	selectOrder = cur.execute(f"SELECT * FROM orders WHERE order_status = 'Опубликован' ORDER BY cus_lat>=\'{cus_lat}\' AND cus_long>=\'{cus_long}\' DESC").fetchall()
-	s = [[x for x in selectOrder[n] if int(getLocationInfo.calculate_km(cus_lat, cus_long, selectOrder[n][8], selectOrder[n][9])) < 100] for n in range(len(selectOrder))]
-	for i in range(len(s)-1):
-		if s[i] == []:
-			s.pop(i)
-		else:
-			continue
+	selectOrder = cur.execute("SELECT * FROM orders WHERE order_status = 'Опубликован'").fetchall()
 
-	return s
+	s = [[x for x in selectOrder[n] if int(getLocationInfo.calculate_km(cus_lat, cus_long, selectOrder[n][8], selectOrder[n][9])) < 100] 
+		for n in range(len(selectOrder))]
+	result = [value for value in s if value]
+
+	return result
+
 
 def selectOrderWhereCusId(cus_id: int, order_id: int):
 	sowci = cur.execute("SELECT * FROM orders WHERE cus_id = ? AND order_id = ?", (cus_id, order_id,)).fetchone()
 	return sowci
 
 
-def checkDeletionDate():
-	today = datetime.datetime.today().strftime('%Y-%m-%d')
-	cur.execute("UPDATE orders SET order_status = 'Завершен' WHERE deletion_date=?", (today,)).fetchall()
+def getMinOrder(date: str):
+	date = [int(i) for i in str(date).split(',')]
+	result = datetime.datetime(date[0], date[1], date[2], date[3], date[4]) - datetime.datetime.today()
+
+	days, seconds = result.days, result.seconds 
+	hours = seconds // 3600
+	minutes = (seconds % 3600) // 60 
+	seconds = seconds % 60
+
+	if days < 0:
+		return 0
+
+	else:
+		return days+hours+minutes
+
+
+def setStatusCompleted(cus_id, order_id):
+	cur.execute("UPDATE orders SET order_status = 'Завершён' WHERE cus_id = ? AND order_id = ?", (cus_id, order_id,))
 	con.commit()
 
 
-def UpdateOrder(cus_id: str, order_id: str, cus_name: str, cus_adress: str, cus_work_graphic: str, cus_work_day: str, cus_bid: str, cus_position: str, cus_comment: str, cus_lat: str, cus_long: str, requirements: str, respons: str):
-	cur.execute("UPDATE orders SET cus_name = ?, cus_adress = ?, cus_work_graphic = ?, cus_work_day = ?, cus_bid = ?, cus_position = ?, cus_comment = ?, cus_lat = ?, cus_long = ?, requirements = ?, respons = ? WHERE cus_id = ? AND order_id = ?", (cus_name, cus_adress, cus_work_graphic, cus_work_day, cus_bid, cus_position, cus_comment, cus_lat, cus_long, requirements, respons, cus_id, order_id,))
+def checkDeletionDate(send_finish = False):
+	orders = cur.execute("SELECT deletion_date, cus_id, order_id FROM orders WHERE order_status = 'Опубликован'")
+	if send_finish:
+		cus_ids = [(x[1], x[2]) for x in orders if getMinOrder(x[0]) <= 0]	
+		return cus_ids	
+
+	mins = [setStatusCompleted(x[1], x[2]) for x in orders if getMinOrder(x[0]) <= 0]
+
+
+def UpdateOrder(cus_id: str, order_id: str, cus_name: str, cus_adress: str, cus_work_graphic: str, 
+	cus_work_day: str, cus_bid: str, cus_position: str, cus_comment: str, cus_lat: str, cus_long: str, 
+	requirements: str, respons: str, payment_for_waiting: str):
+	
+	cur.execute("""UPDATE orders SET cus_name = ?, cus_adress = ?, cus_work_graphic = ?, cus_work_day = ?, 
+		cus_bid = ?, cus_position = ?, cus_comment = ?, cus_lat = ?, cus_long = ?, requirements = ?, 
+		respons = ?, payment_for_waiting = ? WHERE cus_id = ? AND order_id = ?""", 
+
+		(cus_name, cus_adress, cus_work_graphic, cus_work_day, cus_bid, cus_position, 
+		cus_comment, cus_lat, cus_long, requirements, respons, payment_for_waiting, cus_id, order_id,))
+	
 	con.commit()
 
 
@@ -186,6 +227,14 @@ def selectWherePublished(cus_id):
 	swp = cur.execute("SELECT * FROM orders WHERE cus_id = ? AND order_status = ?", (cus_id, 'Опубликован',)).fetchall()
 	return swp
 
+
+def checkOrderType(order_type, item):
+	if order_type == 'stock':
+		return f"<b>Ожидание:</b> <code>{item[-1]}₽/1 день</code>\n"
+
+	elif order_type == 'on_time':
+		return f"<b>Время работы:</b> <code>{item[4]}</code>\n"
+		
 
 # -----------------FOR EXECUTORS-----------------
 def checkExecutor(ex_id: str):
@@ -221,10 +270,9 @@ def UpdateRate(ex_rate: int, ex_id: str):
 	con.commit()
 
 
-
 # ---------FOR RESPONSES---------
-def regResponses(cus_id: int, order_id: int, requests: int, my_performes: int):
-	cur.execute("INSERT INTO responses (cus_id, order_id, requests)VALUES(?,?,?)", (cus_id, order_id, requests,))
+def regResponses(cus_id: int, order_id: int, requests: int, my_performes: int, order_type: str, freezing_money):
+	cur.execute("INSERT INTO responses (cus_id, order_id, requests, order_type, freezing_money)VALUES(?,?,?,?,?)", (cus_id, order_id, requests, order_type, freezing_money,))
 	con.commit()
 
 
@@ -234,9 +282,9 @@ def selectAllFromCusOr(cus_id: int, order_id: int):
 
 
 def selectMyPerInOrderId(cus_id: int, order_id: int):
-	smpwoi = cur.execute("SELECT my_performers FROM responses WHERE cus_id = ? AND order_id = ?", (cus_id, order_id,)).fetchall()
-	my_per = [x[0] for x in smpwoi]
-	return my_per
+	smpwoi = cur.execute("SELECT my_performers FROM responses WHERE cus_id = ? AND order_id = ?", (cus_id, order_id,)).fetchone()
+	# my_per = [x[0] for x in smpwoi]
+	return smpwoi
 
 
 def selectRequests(order_id: int, cus_id: int):
@@ -261,6 +309,7 @@ def extract_3_hour(pd: list):
 	delta = now-pending_date
 
 	hours = delta.total_seconds() // 3600
+	# result_minutes = (delta.total_seconds() % 3600) // 60
 
 	return hours
 
@@ -312,9 +361,48 @@ def removeAll(cus_id: int, order_id: int):
 	con.commit()
 
 
+def replacementExecutor(cus_id, order_id):
+	date = datetime.datetime.now().strftime("%#Y, %#m, %#d, %#H, %#M")
+	cur.execute("UPDATE responses SET replacement = my_performers, my_performers = Null, replacement_date = ? WHERE cus_id = ? AND order_id = ?", (date, cus_id, order_id,))
+	con.commit()
+
+
+# def replacementToMyPerformers(cus_id, order_id):
+# 	cur.execute("UPDATE responses SET my_performers = replacement, replacement = Null WHERE cus_id = ? AND order_id = ?", (cus_id, order_id,))
+# 	con.commit()	
+
+
+def selectMyFreezingMoneys(cus_id, order_id):
+	response = cur.execute("SELECT freezing_money FROM responses WHERE cus_id = ? AND order_id = ?", (cus_id, order_id,)).fetchone()
+	if response:
+		return response[0]
+
+	else:
+		return 0
+
+
+def updateFreezingMoney(count, cus_id, order_id):
+	try:
+		cur.execute("UPDATE responses SET freezing_money = freezing_money - ? WHERE cus_id = ? AND order_id = ?", (count, cus_id, order_id,))
+		con.commit()
+	except:
+		pass
+
+
+def getResponses(to_mail = False):
+	response = cur.execute("SELECT cus_id, order_id, my_performers, date_pending FROM responses WHERE order_type = 'stock' AND my_performers IS NOT NULL AND freezing_money != 0").fetchall()
+	
+	if not to_mail:
+		result = [updateBalance(x[2], selectOrderWhereCusId(x[0], x[1])[-1], '+', payment_status = 'for_waiting', cus_id = x[0], order_id = x[1]) for x in response if extract_3_hour([int(i) for i in x[3].split(',')]) > 3 and selectMyFreezingMoneys(x[0], x[1]) > 0]
+	
+	else:
+		return [(selectOrderWhereCusId(x[0], x[1])[-1], x[0], x[2]) for x in response if extract_3_hour([int(i) for i in x[3].split(',')]) > 3]
+
+
 #-----RATINGS-----
 def regExToRatings(ex_id: str, cus_id: int, order_id: int):
-	cur.execute("INSERT INTO ratings (ex_id, cus_id, order_id, answer)VALUES(?,?,?,?)", (ex_id, cus_id, order_id, '',))
+	date = datetime.datetime.now().strftime("%#Y, %#m, %#d, %#H, %#M")
+	cur.execute("INSERT INTO ratings (ex_id, cus_id, order_id, answer, date_start)VALUES(?,?,?,?,?)", (ex_id, cus_id, order_id, '', date,))
 	con.commit()
 
 
@@ -328,9 +416,16 @@ def UpdateAnswer(ex_id: str, cus_id: str, order_id: str, answer: str):
 	con.commit()
 
 
-def selectReviews(ex_id: str):
+def selectReviews(ex_id: str, for_history = True):
 	reviews = cur.execute("SELECT * FROM ratings WHERE ex_id = ?", (ex_id,)).fetchall()
-	return reviews
+	result = [[x for x in reviews[k] if extract_3_hour([int(i) for i in reviews[k][-1].split(',')]) >= 3] 
+		for k in range(len(reviews))]
+
+	if for_history:
+		return result
+
+	else:
+		return reviews
 
 
 def selectReview(ex_id: str, cus_id: str, order_id: str):
@@ -357,7 +452,7 @@ def addPayment(user_id: str, title: str, user_payment: int, date_of_payment: str
 def addBotPayment(user_id: str, title: str, bot_payment: int, date_of_payment: str):
 	cur.execute("INSERT INTO payments (user_id, title, bot_payment, date_of_payment)VALUES(?,?,?,?)", (user_id, title, bot_payment, date_of_payment,))
 	con.commit()
-
+	
 
 def selectUserWherePaid(user_id, title):
 	if title == 'to_order':
@@ -367,28 +462,42 @@ def selectUserWherePaid(user_id, title):
 
 def selectStatPayments(user_id, title, interval, interval2):
 	if title == 'refill':
-		response = cur.execute("SELECT user_payment FROM payments WHERE user_id = ? AND title = 'refill' AND date_of_payment BETWEEN ? AND ?", (user_id, interval, interval2,))
+		response = cur.execute("SELECT user_payment FROM payments WHERE user_id = ? AND title = 'refill' AND date_of_payment BETWEEN ? AND ?", (user_id, interval, interval2,)).fetchall()
 		return [x[0] for x in response]
 
 
 	elif title == 'withdraw':
-		response = cur.execute("SELECT bot_payment FROM payments WHERE user_id = ? AND title = 'withdraw' AND date_of_payment BETWEEN ? AND ?", (user_id, interval, interval2,))
+		response = cur.execute("SELECT bot_payment FROM payments WHERE user_id = ? AND title = 'withdraw' AND date_of_payment BETWEEN ? AND ?", (user_id, interval, interval2,)).fetchall()
 		return [x[0] for x in response]
 
 
 	elif title == 'coupon_count':
-		response = cur.execute("SELECT counts FROM payments WHERE user_id = ? AND title = 'coupon' AND date_of_payment BETWEEN ? AND ?", (user_id, interval, interval2,))
+		response = cur.execute("SELECT counts FROM payments WHERE user_id = ? AND title = 'coupon' AND date_of_payment BETWEEN ? AND ?", (user_id, interval, interval2,)).fetchall()
 		return [x[0] for x in response]
 
 
 	elif title == 'coupon_payment':
-		response = cur.execute("SELECT user_payment FROM payments WHERE user_id = ? AND title = 'coupon' AND date_of_payment BETWEEN ? AND ?", (user_id, interval, interval2,))
+		response = cur.execute("SELECT user_payment FROM payments WHERE user_id = ? AND title = 'coupon' AND date_of_payment BETWEEN ? AND ?", (user_id, interval, interval2,)).fetchall()
 		return [x[0] for x in response]
 
 
 def deletePayment(user_id, price):
 	cur.execute("DELETE FROM payments WHERE user_id = ? AND user_payment = ?", (user_id, price,))
 	con.commit()
+
+
+def getWithDraw(user_id, date_payment):
+	response = cur.execute("SELECT bot_payment FROM payments WHERE user_id = ? AND date_of_payment = ?", (user_id, date_payment,)).fetchone()
+	
+	if not response:
+		return 0
+	else:
+		return response[0]
+
+
+def getPaymentsforWaiting():
+	response = cur.execute("SELECT bot_payment FROM payments WHERE title = 'payment_for_waiting'").fetchall()
+	return response
 
 
 # ----COUPONS----

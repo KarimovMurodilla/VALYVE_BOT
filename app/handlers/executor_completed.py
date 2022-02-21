@@ -50,7 +50,8 @@ async def process_the_end(c: types.CallbackQuery, state: FSMContext):
 
 	
 	await bot.delete_message(c.from_user.id, c.message.message_id)
-	await bot.send_message(c.from_user.id, "Заказ завершён!\nТеперь вы можете брать новые заказы.",
+	await bot.send_message(c.from_user.id, "🔔 <b>Уведомление:</b>\n\n"
+											"Заказ завершён! Теперь вы можете просматривать и откликаться на новые заказы",
 		reply_markup = buttons.menu_executor)
 	
 
@@ -59,7 +60,8 @@ async def process_the_end(c: types.CallbackQuery, state: FSMContext):
 
 
 	await ExecutorWasComplete.step2.set()
-	await bot.send_message(cus_id, f"Исполнитель <code>{connection.getExecutorProfil(c.from_user.id)[1]}<code> закончил с Вами работу, оцените его качество работы.",
+	await bot.send_message(cus_id,  "🔔 <b>Уведомление:</b>\n\n"
+									f"Исполнитель <code>{connection.getExecutorProfil(c.from_user.id)[1]}</code> завершил с Вами работу. Как Вы оценете качество его работы?",
 		reply_markup = buttons.rating2(cus_id, order_id, ex_id))
 
 
@@ -69,7 +71,6 @@ async def process_change_rate(c: types.CallbackQuery, state: FSMContext):
 	cus_id = ids[0]
 	order_id = ids[1]
 	ex_id = ids[2]
-
 
 	await bot.send_message(c.from_user.id, f"Оцените работу сотрудника по шкале:", 
 		reply_markup = buttons.rating2(cus_id, order_id, ex_id))
@@ -117,8 +118,10 @@ async def process_no_com(c: types.CallbackQuery, state: FSMContext):
 										f"<b>Заказчик:</b> <code>{orderData[1]}</code>\n"
 										f"<b>Адрес:</b> <code>{orderData[2]}</code>\n\n"
 										f"{order}\n\n"
-										f"<b>Отзыв:</b> {review}")	
-		await bot.send_message(cus_id, "Верно или хотите изменить отзыв?", reply_markup = buttons.realOrNot2(cus_id, ex_id, rate, order_id))
+										f"<b>Отзыв:</b> {review}", disable_web_page_preview = True)	
+		await bot.send_message(cus_id, "Верно или хотите изменить отзыв?", 
+			reply_markup = buttons.realOrNot2(cus_id, ex_id, rate, order_id)
+			)
 
 
 
@@ -140,14 +143,16 @@ async def process_text_comment(message: types.Message, state: FSMContext):
 												f"<b>Заказчик:</b> <code>{orderData[1]}</code>\n"
 												f"<b>Адрес:</b> <code>{orderData[2]}</code>\n\n"
 												f"{order}\n\n"
-												f"<b>Отзыв:</b> {review}")	
-		await bot.send_message(cus_id, "Верно или хотите изменить отзыв?", reply_markup = buttons.realOrNot2(cus_id, ex_id, rate, order_id))
+												f"<b>Отзыв:</b> {review}", disable_web_page_preview = True)	
+		await bot.send_message(cus_id, "Верно или хотите изменить отзыв?", 
+			reply_markup = buttons.realOrNot2(cus_id, ex_id, rate, order_id))
 
 
 
 async def process_publish(c: types.CallbackQuery, state: FSMContext):
 	ids = c.data[10:].split(',')
-	await bot.answer_callback_query(c.id, show_alert = True, text = "Сотрудничество завершено!")
+	await c.answer( "🔔 Уведомление:\n\n"
+					"Вы успешно завершили сотрудничество с исполнителем!", show_alert = True)
 	await bot.delete_message(c.from_user.id, c.message.message_id)
 	await bot.delete_message(c.from_user.id, c.message.message_id-1)
 	
@@ -158,13 +163,25 @@ async def process_publish(c: types.CallbackQuery, state: FSMContext):
 		rate = ids[2]
 		order_id = ids[3]
 		cus_name = connection.selectAll(cus_id)[0]
+		orderData = connection.selectOrderWhereCusId(cus_id, order_id)
 		date_of_completion = datetime.datetime.today().strftime('%d.%m.%Y')
 
 		connection.UpdateRating(ex_id, review, cus_id, order_id, date_of_completion)
 		ex_rate = connection.getExecutorProfil(ex_id)[6]
 		connection.UpdateRate(eval(f"{ex_rate}{rate}"), ex_id)
 
+		if orderData[-2] == 'stock':
+			payment_for_waiting = int(orderData[-1])
+			response_data = connection.selectAllFromCusOr(cus_id, order_id)
+			date = response_data[4].split(',')
+
+			date1 = datetime.datetime.now()
+			date2 = datetime.datetime(day=int(date[2]), month=int(date[1]), year=int(date[0]))
+			timedelta = date1-date2
+			connection.updateBalance(ex_id, timedelta.days * payment_for_waiting, '+')
+
 		await state.finish()
+
 
 # ----UNDER CONSIDERATION---
 async def callback_con_finish(c: types.CallbackQuery, state: FSMContext):
@@ -194,13 +211,15 @@ async def process_finish_under_consideration(c: types.CallbackQuery, state: FSMC
 
 	
 	await bot.delete_message(c.from_user.id, c.message.message_id)
-	await bot.send_message(c.from_user.id, "Заказ завершён!\nТеперь вы можете брать новые заказы.",
+	await bot.send_message(c.from_user.id, "🔔 <b>Уведомление:</b>\n\n"
+											"Заказ завершён! Теперь вы можете просматривать и откликаться на новые заказы",
 		reply_markup = buttons.menu_executor)
 
 	connection.UpdateExStatus(c.from_user.id, 'free')
 	connection.deleteMyPer(int(ex_id), int(cus_id), int(order_id))	
 
-	await bot.send_message(cus_id, f"Исполнитель <code>{connection.getExecutorProfil(c.from_user.id)[1]}</code> закончил с Вами работу.")
+	await bot.send_message(cus_id,  "🔔 <b>Уведомление:</b>\n\n"
+									f"Исполнитель <code>{connection.getExecutorProfil(c.from_user.id)[1]}</code> завершил с Вами сотрудничество")
 
 
 async def callback_write_to_cus(c: types.CallbackQuery, state: FSMContext):

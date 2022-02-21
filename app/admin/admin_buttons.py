@@ -22,8 +22,8 @@ def adminConsol(sensor, sensor2, sensor3, sensor4):
 	payment = types.InlineKeyboardButton(f"Вывод {sensor}", callback_data = "payment")
 	report = types.InlineKeyboardButton(f"Сообщить", callback_data = "report")
 	list_of_announcements = types.InlineKeyboardButton(f"Список объявлений", callback_data = "list_of_announcements")
-	ads = types.InlineKeyboardButton(f"Объявления {sensor3}", callback_data = "ads")
-	ribbons = types.InlineKeyboardButton(f"Ленты {sensor2}", callback_data = "ribbons")
+	ads = types.InlineKeyboardButton(f"[S] Объявления {sensor3}", callback_data = "ads")
+	ribbons = types.InlineKeyboardButton(f"[P] Ленты {sensor2}", callback_data = "ribbons")
 	replenishment = types.InlineKeyboardButton(f"Пополнение {sensor4}", callback_data = "replenishment")
 	withdrawal_history = types.InlineKeyboardButton(f"История вывода", callback_data = "withdrawal_history")
 
@@ -97,11 +97,11 @@ def adminModeration():
 
 def bankProject():	
 	bank = types.InlineKeyboardMarkup(row_width = 2)
-	admin_output = types.InlineKeyboardButton("Вывести", callback_data = "admin_output")
+	admin_output = types.InlineKeyboardButton("Вывести", callback_data = "admin_withdraw")
 	refresh = types.InlineKeyboardButton("Обновить", callback_data = "refresh")
 	ic_stock = types.InlineKeyboardButton("[iC] Запас", callback_data = "ic_stock")
 	ic_one_time = types.InlineKeyboardButton("[iC] Разовой", callback_data = "ic_one_time")
-	list_of_expenses = types.InlineKeyboardButton("Список расходов", switch_inline_query_current_chat = "list_of_expenses")
+	list_of_expenses = types.InlineKeyboardButton("Список расходов", callback_data = "list_of_expenses")
 	list_of_reports = types.InlineKeyboardButton("Список отчетов", switch_inline_query_current_chat = "list_of_reports")
 	bank.add(admin_output, refresh)
 	bank.add(ic_stock, ic_one_time)
@@ -126,7 +126,7 @@ def requestOrderBtns(cus_id, order_id):
 
 def settingsOrderBtns(cus_id, order_id):
 	settings_order = types.InlineKeyboardMarkup(row_width = 2)
-	toEdit = types.InlineKeyboardButton(text = "Ред.профиль", callback_data = f'toEdit {cus_id},{order_id}')
+	toEdit = types.InlineKeyboardButton(text = "Ред.заказ", callback_data = f'toEdit {cus_id},{order_id}')
 	finishEdit = types.InlineKeyboardButton(text = "Опубликовать", callback_data = f'finishEdit {cus_id},{order_id}')
 	settings_order.add(toEdit, finishEdit)
 
@@ -159,10 +159,16 @@ def skipBtn():
 	return skip_btn
 
 
-def update():
+def update(title):
 	btn_update = types.InlineKeyboardMarkup(row_width = 2)
-	update = types.InlineKeyboardButton(text = "Обновить", callback_data = f'update')
-	btn_update.add(update)
+	update_expenses = types.InlineKeyboardButton(text = "Обновить", callback_data = f'update_expenses')
+	update_stat = types.InlineKeyboardButton(text = "Обновить", callback_data = f'update_stat')
+
+	if title == 'expenses':	
+		btn_update.add(update_expenses)
+
+	elif title == 'stat':
+		btn_update.add(update_stat)
 
 	return btn_update
 
@@ -175,6 +181,14 @@ def adminPrice(total_1, total_2, total_3):
 	aPrices.add(aPrice_1, aPrice_2, aPrice_3)
 
 	return aPrices
+
+
+def changeIcStock():
+	change_btn = types.InlineKeyboardMarkup()
+	change_stock = types.InlineKeyboardButton(text = 'Изменить', callback_data = f'change_stock')
+	change_btn.add(change_stock)
+
+	return change_btn
 
 
 def icOneSets():
@@ -213,3 +227,21 @@ def showUserComplaintsBtns(ex_id, rowid):
 	sucb.add(cBan, cReject, cEdit)
 
 	return sucb
+
+
+def adminWithdrawBtns():
+	withdraw_btns = types.InlineKeyboardMarkup(row_width = 2)
+	card = types.InlineKeyboardButton(text = "Карта", callback_data = 'admin_card')
+	purse = types.InlineKeyboardButton(text = "Кошелёк", callback_data = 'admin_purse')
+	withdraw_btns.add(card, purse)
+
+	return withdraw_btns
+
+
+def adminWithdrawCheckBtns():
+	withdraw_check_btns = types.InlineKeyboardMarkup(row_width = 2)
+	confirm = types.InlineKeyboardButton(text = "Подтвердить", callback_data = 'admin_confirm')
+	change_withdraw = types.InlineKeyboardButton(text = "Изменить", callback_data = 'admin_change_withdraw')
+	withdraw_check_btns.add(confirm, change_withdraw)
+
+	return withdraw_check_btns

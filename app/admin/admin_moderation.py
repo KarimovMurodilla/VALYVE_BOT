@@ -10,7 +10,6 @@ from .. import config, connection, file_ids, buttons, getLocationInfo
 bot = Bot(token=config.TOKEN, parse_mode = 'html')
 
 
-
 class EditOrder(StatesGroup):
 	step1 = State()
 	step2 = State()
@@ -58,7 +57,9 @@ async def order_requests(c: types.CallbackQuery, state: FSMContext):
 			f"<b>Заказчик:</b> <code>{orders[1]}</code>\n"
 			f"<b>Адрес:</b> <code>{orders[2]}</code>\n\n"
 			f"<b>Должность:</b> <code>{orders[6]}</code>\n"
-			f"<b>Время работы:</b> <code>{orders[4]}</code>\n"
+            f"{connection.checkOrderType(orders[-2], orders)}"
+
+			# f"<b>Время работы:</b> <code>{orders[4]}</code>\n"
 			f"<b>График:</b> <code>{orders[3]}</code>\n"
 			f"<b>Смена:</b> <code>{orders[5]}</code>\n\n"
 			
@@ -74,8 +75,6 @@ async def order_requests(c: types.CallbackQuery, state: FSMContext):
 		await bot.answer_callback_query(c.id, show_alert = True, text = "Ничего не найдено")	
 
 
-
-
 async def callbackToBack(c: types.CallbackQuery, state: FSMContext):
 	try:
 		async with state.proxy() as data:
@@ -84,11 +83,9 @@ async def callbackToBack(c: types.CallbackQuery, state: FSMContext):
 			pag = connection.selectPag(user_id)
 			orders = admin_connection.selectOrdersWhereInModeration()[pag]
 
-
 		if pag < 0:
 			connection.nextPagination(user_id)
 			await bot.answer_callback_query(c.id, show_alert = False, text = "❗️Вы находитесь на первом каталоге списка")	
-
 
 		else:
 			await bot.edit_message_text(chat_id = c.message.chat.id, 	
@@ -96,7 +93,8 @@ async def callbackToBack(c: types.CallbackQuery, state: FSMContext):
 									text =	f"<b>Заказчик:</b> <code>{orders[1]}</code>\n"
 											f"<b>Адрес:</b> <code>{orders[2]}</code>\n\n"
 											f"<b>Должность:</b> <code>{orders[6]}</code>\n"
-											f"<b>Время работы:</b> <code>{orders[4]}</code>\n"
+								            f"{connection.checkOrderType(orders[-2], orders)}"
+											# f"<b>Время работы:</b> <code>{orders[4]}</code>\n"
 											f"<b>График:</b> <code>{orders[3]}</code>\n"
 											f"<b>Смена:</b> <code>{orders[5]}</code>\n\n"
 													
@@ -123,7 +121,8 @@ async def callbackToNext(c: types.CallbackQuery, state: FSMContext):
 									f"<b>Адрес:</b> <code>{orders[2]}</code>\n\n"
 									
 									f"<b>Должность:</b> <code>{orders[6]}</code>\n"
-									f"<b>Время работы:</b> <code>{orders[4]}</code>\n"
+						            f"{connection.checkOrderType(orders[-2], orders)}"
+									# f"<b>Время работы:</b> <code>{orders[4]}</code>\n"
 									f"<b>График:</b> <code>{orders[3]}</code>\n"
 									f"<b>Смена:</b> <code>{orders[5]}</code>\n\n"
 			
@@ -137,11 +136,30 @@ async def callbackToNext(c: types.CallbackQuery, state: FSMContext):
 		await bot.answer_callback_query(c.id, show_alert = False, text = "❗️Вы находитесь на последнем каталоге списка")
 
 
+def pay_to_refferal(cus_id, comission):
+	from_id = connection.getMyFromId(cus_id)
+	today = datetime.datetime.today()
+	
+	try:
+		if from_id.isdigit():
+			connection.addActiveReferral(from_id)
+			connection.addBotPayment(from_id, 'refferal', comission/100*7, today)
+			connection.updateBalance(from_id, comission/100*7, '+')
+			connection.setActiveUser(cus_id)
+			print(comission)
+	except Exception as e:
+		print(e)
+		return None
+
+
+# ----APPROVE----
 async def callbackApprove(c: types.CallbackQuery, state: FSMContext):
 	ids = c.data[10:].split(',')
 	cus_id = ids[0]
 	order_id = ids[1]
+	comission = 0
 	today = datetime.datetime.today()
+	order_data = connection.selectOrderWhereCusId(cus_id, order_id)
 
 	if connection.selectOrderWhereCusId(cus_id, order_id)[11] == 'Отклонён':
 		await c.answer("⚠️ Ошибка:\n\nЭтот заказ уже oтклонён")
@@ -151,23 +169,52 @@ async def callbackApprove(c: types.CallbackQuery, state: FSMContext):
 		if connection.selectOrderWhereCusId(cus_id, order_id)[11] == 'На модерации':
 			actual_days = int(connection.selectOrderWhereCusId(cus_id, order_id)[16])
 			deletion_date = today + datetime.timedelta(days=actual_days)
-			connection.UpdateOrderStatus(cus_id, order_id, "Опубликован", str(deletion_date)[:10])
-			admin_connection.addView('ads', datetime.datetime.today().strftime('%d.%m.%Y'))
+			connection.UpdateOrderStatus(cus_id, order_id, "Опубликован", str(deletion_date.strftime("%#Y, %#m, %#d, %#H, %#M")))
+			admin_connection.addView('ads', today)
+
+			if order_data[-2] == 'stock':
+				frst = int(admin_connection.selectIcs('ic_stock', 1)[0])
+				connection.addPayment(cus_id, 'profit', frst*actual_days, today)
+				connection.addPayment(cus_id, 'to_order', order_data[-6], today)
+				connection.regResponses(cus_id, order_id, None, None, order_data[-2], actual_days*int(order_data[-1]))
+				pay_to_refferal(cus_id, frst*actual_days)
+
+			elif order_data[-2] == 'on_time':
+				frst = int(admin_connection.selectIcs('ic_one_time', 1)[0])
+				scnd = int(admin_connection.selectIcs('ic_one_time', 2)[0])
+				thrd = int(admin_connection.selectIcs('ic_one_time', 3)[0])
+
+				if actual_days == 3:
+					comission = frst * 3
+					connection.addPayment(cus_id, 'profit', comission, today)
+					connection.regResponses(cus_id, order_id, None, None, order_data[-2], actual_days*int(order_data[-1]))
+					pay_to_refferal(cus_id, comission)
+
+				elif actual_days == 7:
+					comission = scnd * 7
+					connection.addPayment(cus_id, 'profit', comission, today)
+					connection.regResponses(cus_id, order_id, None, None, order_data[-2], actual_days*int(order_data[-1]))
+					pay_to_refferal(cus_id, comission)
+					
+				elif actual_days == 30:
+					comission = thrd * 30
+					connection.addPayment(cus_id, 'profit', comission, today)
+					connection.regResponses(cus_id, order_id, None, None, order_data[-2], actual_days*int(order_data[-1]))
+					pay_to_refferal(cus_id, comission)
 			
 			await c.message.delete()
 			await bot.delete_message(c.from_user.id, c.message.message_id-1)
 			await bot.answer_callback_query(c.id, show_alert = True, text = "✅ Этот заказ опубликован")
-			await bot.send_message(c.from_user.id, "Админ панель", reply_markup = admin_buttons.admin_canc())
-
-
+			await bot.send_message(c.from_user.id, "Админ панель", reply_markup = admin_buttons.adminPanel())
 
 		else:
 			actual_days = int(connection.selectOrderWhereCusId(cus_id, order_id)[16])
 			deletion_date = today + datetime.timedelta(days=actual_days)
-			connection.UpdateOrderStatus(cus_id, order_id, "Опубликован", str(deletion_date)[:10])
+			connection.UpdateOrderStatus(cus_id, order_id, "Опубликован", str(deletion_date.strftime("%#Y, %#m, %#d, %#H, %#M")))
+			
 			await c.message.delete()
 			await bot.answer_callback_query(c.id, show_alert = True, text = "✅ Этот заказ опубликован")
-			await bot.send_message(c.from_user.id, "Админ панель", reply_markup = admin_buttons.admin_canc())
+			await bot.send_message(c.from_user.id, "Админ панель", reply_markup = admin_buttons.adminPanel())
 
 
 async def callbackReject(c: types.CallbackQuery, state: FSMContext):
@@ -188,13 +235,12 @@ async def callbackReject(c: types.CallbackQuery, state: FSMContext):
 		await bot.answer_callback_query(c.id, show_alert = True, text = "🗑 Этот заказ отклонён")
 
 
-
 # ------To Edit------
 async def callbackEdit(c: types.CallbackQuery, state: FSMContext):
 	ids = c.data[7:].split(',')
 	cus_id = ids[0]
 	order_id = ids[1]
-
+	order_type = connection.selectOrderWhereCusId(cus_id, order_id)[-2]
 
 	if connection.selectOrderWhereCusId(cus_id, order_id)[11] == 'Опубликован':
 		await c.answer("⚠️ Ошибка:\n\nЭтот заказ уже опубликован")
@@ -203,17 +249,17 @@ async def callbackEdit(c: types.CallbackQuery, state: FSMContext):
 		await c.answer("⚠️ Ошибка:\n\nЭтот заказ уже oтклонён")
 
 	else:
-		admin_connection.addView('ads', datetime.datetime.today().strftime('%d.%m.%Y'))
-
 		async with state.proxy() as data:
 			data['cus_id'] = cus_id
 			data['order_id'] = order_id
+			data['order_type'] = order_type
 
 		await EditOrder.step1.set()
 		await bot.send_message(c.message.chat.id, ".", 
 			reply_markup = buttons.send_geo)
 		await bot.send_message(c.message.chat.id, "Отправьте мне <b>адрес места работы</b>, для корректного поиска исполнителей.", 
 			reply_markup = admin_buttons.skipBtn())
+
 
 async def process_output_location(message: types.Message, state: FSMContext):
 	async with state.proxy() as data:
@@ -233,17 +279,31 @@ async def process_output_position(message: types.Message, state: FSMContext):
 		data['position'] = message.text
 		await EditOrder.next()
 
-		await bot.send_message(message.chat.id, "- На какое <b>кол-в дней</b> вам нужен сотрудник?",
-			reply_markup = admin_buttons.skipBtn())
+		if data['order_type'] == 'stock':
+			await message.answer("Отправьте мне сколько вы будете платить за 1 день ожидание.",
+				reply_markup = admin_buttons.skipBtn())	
+
+		else:
+			await bot.send_message(message.chat.id, "- На какое <b>кол-в дней</b> вам нужен сотрудник?",
+				reply_markup = admin_buttons.skipBtn())
 
 
 async def process_output_days(message: types.Message, state: FSMContext):
 	async with state.proxy() as data:
-		data['days'] = message.text
-		await EditOrder.next()
+		if data['order_type'] == 'stock':
+			if message.text.isdigit():
+				await EditOrder.next()
+				data['payment_for_waiting'] = message.text
+				data['days'] = None
+				await message.answer("- Отправьте мне <b>график работы.</b>", reply_markup = admin_buttons.skipBtn())
+			else:
+				await message.answer("Введите только цифрами!")
 
-		await bot.send_message(message.chat.id, "- Отправьте мне <b>график работы.</b>",
-			reply_markup = admin_buttons.skipBtn())
+		else:
+			await EditOrder.next()
+			data['days'] = message.text
+			data['payment_for_waiting'] = None
+			await message.answer("- Отправьте мне <b>график работы.</b>", reply_markup = admin_buttons.skipBtn())
 
 
 async def process_output_graphic(message: types.Message, state: FSMContext):
@@ -307,13 +367,19 @@ async def process_output_comment_and_all_data(message: types.Message, state: FSM
 		cus_comment = data['comment']
 		cus_lat = data['location_lat']
 		cus_long = data['location_long']
+		payment_for_waiting = data['payment_for_waiting']
+
+		if data['order_type'] == 'stock':
+			text = f"<b>Ожидание:</b> <code>{payment_for_waiting}₽/1 день</code>\n"
+		else:
+			text = f"<b>Время работы:</b> <code>{cus_work_day}</code>\n"
 
 
 		await bot.send_message(message.chat.id, f"<b>Заказчик:</b> <code>{cus_name[0]}</code>\n"
 												f"<b>Адреc: </b><code>{cus_adress}</code>\n\n"
 
 												f"<b>Должность:</b> <code>{cus_position}</code>\n"
-												f"<b>Время работы:</b> <code>{cus_work_day}</code>\n"
+												f"{text}"
 												f"<b>График:</b> <code>{cus_work_graphic}</code>\n"
 												f"<b>Смена:</b> <code>{cus_bid}</code>\n\n"
 
@@ -344,13 +410,18 @@ async def process_output_without_comment(c: types.CallbackQuery, state: FSMConte
 		cus_comment = data['comment']
 		cus_lat = data['location_lat']
 		cus_long = data['location_long']
-
+		payment_for_waiting = data['payment_for_waiting']	
+		
+		if data['order_type'] == 'stock':
+			text = f"<b>Ожидание:</b> <code>{payment_for_waiting}₽/1 день</code>\n"
+		else:
+			text = f"<b>Время работы:</b> <code>{cus_work_day}</code>\n"
 
 		await bot.send_message(c.from_user.id, f"<b>Заказчик:</b> <code>{cus_name[0]}</code>\n"
 												f"<b>Адреc: </b><code>{cus_adress}</code>\n\n"
 
 												f"<b>Должность:</b> <code>{cus_position}</code>\n"
-												f"<b>Время работы:</b> <code>{cus_work_day}</code>\n"
+												f"{text}"
 												f"<b>График:</b> <code>{cus_work_graphic}</code>\n"
 												f"<b>Смена:</b> <code>{cus_bid}</code>\n\n"
 
@@ -379,10 +450,14 @@ async def callbackPublish(c: types.CallbackQuery, state: FSMContext):
 		cus_lat = data['location_lat']
 		cus_long = data['location_long']
 		order_status = 'На модерации'
+		payment_for_waiting = data['payment_for_waiting']	
+
 
 		await bot.delete_message(c.message.chat.id, c.message.message_id)
-
-	connection.UpdateOrder(cus_id, order_id, cus_name, cus_adress, cus_work_graphic, cus_work_day, cus_bid, cus_position, cus_comment, cus_lat, cus_long, requirement, respons)
+	
+	admin_connection.addView('ads', datetime.datetime.today().strftime('%d.%m.%Y'))
+	connection.UpdateOrder(cus_id, order_id, cus_name, cus_adress, cus_work_graphic, cus_work_day, cus_bid, 
+		cus_position, cus_comment, cus_lat, cus_long, requirement, respons, payment_for_waiting)
 
 	await bot.send_message(c.from_user.id, "🔔 <b>Уведомление:</b>\n\nПоздравляю, <b>заказ</b> успешно отредактирован! 🥳", reply_markup = admin_buttons.adminPanel())
 	await state.finish()
@@ -418,8 +493,13 @@ async def callback_output_position(c: types.CallbackQuery, state: FSMContext):
 
 		data['position'] = order[6]
 
-		await bot.send_message(c.from_user.id, "- На какое <b>кол-в дней</b> вам нужен сотрудник?",
-			reply_markup = admin_buttons.skipBtn())
+		if data['order_type'] == 'stock':
+			await c.message.answer("Отправьте мне сколько вы будете платить за 1 день ожидание.",
+				reply_markup = admin_buttons.skipBtn())	
+
+		else:
+			await c.message.answer("- На какое <b>кол-в дней</b> вам нужен сотрудник?",
+				reply_markup = admin_buttons.skipBtn())
 
 
 async def callback_output_days(c: types.CallbackQuery, state: FSMContext):
@@ -430,8 +510,14 @@ async def callback_output_days(c: types.CallbackQuery, state: FSMContext):
 		cus_id = data['cus_id']
 		order_id = data['order_id']
 		order = connection.selectOrderWhereCusId(cus_id, order_id)
+		
+		if data['order_type'] == 'stock':
+			data['payment_for_waiting'] = order[-1]
+			data['days'] = None
 
-		data['days'] = order[4]
+		else:
+			data['days'] = order[4]
+			data['payment_for_waiting'] = None
 
 		await bot.send_message(c.from_user.id, "- Отправьте мне <b>график работы.</b>",
 			reply_markup = admin_buttons.skipBtn())
@@ -503,6 +589,7 @@ async def callback_output_respons(c: types.CallbackQuery, state: FSMContext):
 			reply_markup = buttons.skip_btn)
 
 
+# -------------PROFILE CLAIMS-------------
 async def callback_profile_claims(c: types.CallbackQuery, state: FSMContext):
 	admin_id = c.from_user.id
 	try:
