@@ -185,22 +185,22 @@ async def callbackApprove(c: types.CallbackQuery, state: FSMContext):
 				thrd = int(admin_connection.selectIcs('ic_one_time', 3)[0])
 
 				if actual_days == 3:
-					comission = frst * 3
-					connection.addPayment(cus_id, 'profit', comission, today)
-					connection.regResponses(cus_id, order_id, None, None, order_data[-2], actual_days*int(order_data[-1]))
-					pay_to_refferal(cus_id, comission)
+					# comission = frst * 3
+					connection.addPayment(cus_id, 'profit', 3, today)
+					connection.regResponses(cus_id, order_id, None, None, order_data[-2], None)
+					# pay_to_refferal(cus_id, 3)
 
 				elif actual_days == 7:
-					comission = scnd * 7
+					# comission = scnd * 7
 					connection.addPayment(cus_id, 'profit', comission, today)
-					connection.regResponses(cus_id, order_id, None, None, order_data[-2], actual_days*int(order_data[-1]))
-					pay_to_refferal(cus_id, comission)
+					connection.regResponses(cus_id, order_id, None, None, order_data[-2], None)
+					# pay_to_refferal(cus_id, comission)
 					
 				elif actual_days == 30:
-					comission = thrd * 30
+					# comission = thrd * 30
 					connection.addPayment(cus_id, 'profit', comission, today)
-					connection.regResponses(cus_id, order_id, None, None, order_data[-2], actual_days*int(order_data[-1]))
-					pay_to_refferal(cus_id, comission)
+					connection.regResponses(cus_id, order_id, None, None, order_data[-2], None)
+					# pay_to_refferal(cus_id, comission)
 			
 			await c.message.delete()
 			await bot.delete_message(c.from_user.id, c.message.message_id-1)
