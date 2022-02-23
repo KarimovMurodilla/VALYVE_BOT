@@ -494,9 +494,9 @@ async def process_get_publish(c: types.CallbackQuery, state: FSMContext):
 				scnd = int(admin_connection.selectIcs('ic_one_time', 2)[0])
 				thrd = int(admin_connection.selectIcs('ic_one_time', 3)[0])
 
-				total_1 = frst*3
-				total_2 = scnd*7
-				total_3 = thrd*30
+				total_1 = frst
+				total_2 = scnd
+				total_3 = thrd
 
 				await bot.send_photo(
 					chat_id = c.message.chat.id, 
@@ -582,8 +582,8 @@ async def check_payment(c: types.CallbackQuery, state: FSMContext):
 				# 	elif actual_days == '180':
 				# 		comission = frst * 180
 
-				# elif data['order_type'] == 'on_time':
-				# 	cus_work_day = data['days']
+				if data['order_type'] == 'on_time':
+					cus_work_day = data['days']
 
 				# 	frst = int(admin_connection.selectIcs('ic_one_time', 1)[0])
 				# 	scnd = int(admin_connection.selectIcs('ic_one_time', 2)[0])
