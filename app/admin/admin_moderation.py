@@ -143,8 +143,10 @@ def pay_to_refferal(cus_id, comission):
 	try:
 		if from_id.isdigit():
 			connection.addActiveReferral(from_id)
-			connection.addBotPayment(from_id, 'refferal', comission/100*7, today)
-			connection.updateBalance(from_id, comission/100*7, '+')
+			# connection.addBotPayment(from_id, 'refferal', comission/100*7, today)
+			# connection.updateBalance(from_id, comission/100*7, '+')
+			connection.addBotPayment(from_id, 'refferal', comission, today)
+			connection.updateBalance(from_id, comission, '+')
 			connection.setActiveUser(cus_id)
 			print(comission)
 	except Exception as e:
@@ -178,8 +180,7 @@ async def callbackApprove(c: types.CallbackQuery, state: FSMContext):
 				connection.addPayment(cus_id, 'to_order', order_data[-6], today)
 				connection.regResponses(cus_id, order_id, None, None, order_data[-2], actual_days*int(order_data[-1]))
 				# pay_to_refferal(cus_id, frst*actual_days)
-				pay_to_refferal(cus_id, 10)
-
+				# pay_to_refferal(cus_id, 10)
 
 			elif order_data[-2] == 'on_time':
 				frst = int(admin_connection.selectIcs('ic_one_time', 1)[0])
@@ -190,13 +191,13 @@ async def callbackApprove(c: types.CallbackQuery, state: FSMContext):
 					# comission = frst * 3
 					connection.addPayment(cus_id, 'profit', 3, today)
 					connection.regResponses(cus_id, order_id, None, None, order_data[-2], None)
-					# pay_to_refferal(cus_id, 3)
+					# pay_to_refferal(cus_id, comission)
 					pay_to_refferal(cus_id, 10)
 
 
 				elif actual_days == 7:
 					# comission = scnd * 7
-					connection.addPayment(cus_id, 'profit', comission, today)
+					connection.addPayment(cus_id, 'profit', 7, today)
 					connection.regResponses(cus_id, order_id, None, None, order_data[-2], None)
 					# pay_to_refferal(cus_id, comission)
 					pay_to_refferal(cus_id, 10)
@@ -204,11 +205,11 @@ async def callbackApprove(c: types.CallbackQuery, state: FSMContext):
 					
 				elif actual_days == 30:
 					# comission = thrd * 30
-					connection.addPayment(cus_id, 'profit', comission, today)
+					connection.addPayment(cus_id, 'profit', 30, today)
 					connection.regResponses(cus_id, order_id, None, None, order_data[-2], None)
 					# pay_to_refferal(cus_id, comission)
 					pay_to_refferal(cus_id, 10)
-
+					
 			
 			await c.message.delete()
 			await bot.delete_message(c.from_user.id, c.message.message_id-1)
