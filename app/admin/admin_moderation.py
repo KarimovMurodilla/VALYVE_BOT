@@ -136,7 +136,8 @@ async def callbackToNext(c: types.CallbackQuery, state: FSMContext):
 		await bot.answer_callback_query(c.id, show_alert = False, text = "❗️Вы находитесь на последнем каталоге списка")
 
 
-def pay_to_refferal(cus_id, comission):
+# ----APPROVE----
+async def pay_to_refferal(cus_id, comission):
 	from_id = connection.getMyFromId(cus_id)
 	today = datetime.datetime.today()
 	
@@ -148,13 +149,14 @@ def pay_to_refferal(cus_id, comission):
 			connection.addBotPayment(from_id, 'refferal', comission, today)
 			connection.updateBalance(from_id, comission, '+')
 			connection.setActiveUser(cus_id)
-			print(comission)
+
+			await bot.send_message(875587704, "🔔 Уведомление:\n\n"
+										          "Вам начислено <code>10.0 ₽</code> за реферала на счёт. Посмотреть баланс можно в \"Банк проекта\"")
 	except Exception as e:
 		print(e)
 		return None
 
 
-# ----APPROVE----
 async def callbackApprove(c: types.CallbackQuery, state: FSMContext):
 	ids = c.data[10:].split(',')
 	cus_id = ids[0]
@@ -192,7 +194,7 @@ async def callbackApprove(c: types.CallbackQuery, state: FSMContext):
 					connection.addPayment(cus_id, 'profit', 3, today)
 					connection.regResponses(cus_id, order_id, None, None, order_data[-2], None)
 					# pay_to_refferal(cus_id, comission)
-					pay_to_refferal(cus_id, 10)
+					await pay_to_refferal(cus_id, 10)
 
 
 				elif actual_days == 7:
@@ -200,7 +202,7 @@ async def callbackApprove(c: types.CallbackQuery, state: FSMContext):
 					connection.addPayment(cus_id, 'profit', 7, today)
 					connection.regResponses(cus_id, order_id, None, None, order_data[-2], None)
 					# pay_to_refferal(cus_id, comission)
-					pay_to_refferal(cus_id, 10)
+					await pay_to_refferal(cus_id, 10)
 
 					
 				elif actual_days == 30:
@@ -208,7 +210,7 @@ async def callbackApprove(c: types.CallbackQuery, state: FSMContext):
 					connection.addPayment(cus_id, 'profit', 30, today)
 					connection.regResponses(cus_id, order_id, None, None, order_data[-2], None)
 					# pay_to_refferal(cus_id, comission)
-					pay_to_refferal(cus_id, 10)
+					await pay_to_refferal(cus_id, 10)
 					
 			
 			await c.message.delete()
